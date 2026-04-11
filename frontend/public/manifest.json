@@ -1,0 +1,9 @@
+{
+  "short_name": "Learn Analytics",
+  "name": "Learning Analytics Dashboard",
+  "icons": [],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#2563eb",
+  "background_color": "#f9fafb"
+}
