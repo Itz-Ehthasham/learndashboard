@@ -387,10 +387,10 @@ analyticsSchema.statics.getDashboardAnalytics = async function(userId, userRole)
     
     // Calculate overall metrics
     const overallAverage = performanceAnalytics.length > 0
-      ? performanceAnalytics.reduce((sum, analytics) => sum + (analytics.data.averageScore || 0), 0) / performanceAnalytics.length
+      ? performanceAnalytics.reduce((sum, a) => sum + (a.data?.averageScore ?? 0), 0) / performanceAnalytics.length
       : 0;
     
-    const totalAssessments = performanceAnalytics.reduce((sum, analytics) => sum + (analytics.data.completedAssessments || 0), 0);
+    const totalAssessments = performanceAnalytics.reduce((sum, a) => sum + (a.data?.completedAssessments ?? 0), 0);
     
     analytics = {
       overallAverage,
@@ -423,13 +423,14 @@ analyticsSchema.statics.getDashboardAnalytics = async function(userId, userRole)
     });
     
     const classAverage = courseAnalytics.length > 0
-      ? courseAnalytics.reduce((sum, analytics) => sum + (analytics.data.averageScore || 0), 0) / courseAnalytics.length
+      ? courseAnalytics.reduce((sum, a) => sum + (a.data?.averageScore ?? 0), 0) / courseAnalytics.length
       : 0;
     
     analytics = {
       totalCourses: instructorCourses.length,
       totalStudents: allStudents[0]?.totalStudents || 0,
       classAverage,
+      pendingGrades: 0,
       recentActivity: new Date()
     };
     

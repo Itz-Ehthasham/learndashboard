@@ -310,6 +310,13 @@ router.get('/reports/performance', authenticate, async (req, res) => {
       }
     }
 
+    if (analyticsData === null || analyticsData === undefined) {
+      return res.status(404).json({
+        success: false,
+        message: 'No analytics data found for the selected filters. Try generating analytics first or pick another course.'
+      });
+    }
+
     if (format === 'csv') {
       // Convert to CSV format (simplified)
       const csv = convertAnalyticsToCSV(analyticsData);

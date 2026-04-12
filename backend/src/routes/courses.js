@@ -123,6 +123,7 @@ router.post('/', authenticate, authorize('admin', 'trainer'), validateCourseCrea
       code,
       instructor,
       category,
+      branch,
       level,
       credits,
       duration,
@@ -131,8 +132,14 @@ router.post('/', authenticate, authorize('admin', 'trainer'), validateCourseCrea
       tags
     } = req.body;
 
+    const instructorId =
+      req.user.role === 'trainer'
+        ? req.user._id
+        : instructor;
+
     // Check if course code already exists
-    const existingCourse = await Course.findOne({ code });
+    const codeNormalized = typeof code === 'string' ? code.trim().toUpperCase() : code;
+    const existingCourse = await Course.findOne({ code: codeNormalized });
     if (existingCourse) {
       return res.status(400).json({
         success: false,
@@ -141,7 +148,7 @@ router.post('/', authenticate, authorize('admin', 'trainer'), validateCourseCrea
     }
 
     // Verify instructor exists and is a trainer
-    const instructorUser = await User.findById(instructor);
+    const instructorUser = await User.findById(instructorId);
     if (!instructorUser || instructorUser.role !== 'trainer') {
       return res.status(400).json({
         success: false,
@@ -149,18 +156,27 @@ router.post('/', authenticate, authorize('admin', 'trainer'), validateCourseCrea
       });
     }
 
+    const schedulePayload = {
+      ...schedule,
+      startDate: schedule?.startDate,
+      endDate: schedule?.endDate,
+      startTime: (schedule?.startTime && String(schedule.startTime).trim()) || '09:00',
+      endTime: (schedule?.endTime && String(schedule.endTime).trim()) || '17:00'
+    };
+
     // Create new course
     const course = new Course({
       title,
       description,
-      code,
-      instructor,
+      code: codeNormalized,
+      instructor: instructorId,
       category,
+      branch,
       level,
       credits,
       duration,
       maxStudents,
-      schedule,
+      schedule: schedulePayload,
       tags: tags || []
     });
 

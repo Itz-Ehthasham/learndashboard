@@ -1,9 +1,11 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery } from 'react-query';
 import { userService } from '../services/api';
 import { UserGroupIcon } from '@heroicons/react/24/outline';
 
 const Users = () => {
+  const navigate = useNavigate();
   const { data: usersData, isLoading, error } = useQuery(
     'users',
     userService.getUsers
@@ -81,7 +83,11 @@ const Users = () => {
                         </span>
                       </td>
                       <td className="table-cell">
-                        <button className="btn btn-outline btn-sm">
+                        <button
+                          type="button"
+                          className="btn btn-outline btn-sm"
+                          onClick={() => navigate(`/users/${user._id}`)}
+                        >
                           Edit
                         </button>
                       </td>

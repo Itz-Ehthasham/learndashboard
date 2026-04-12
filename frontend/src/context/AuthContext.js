@@ -1,12 +1,12 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
-import { authAPI } from '../services/api';
+import { authAPI, api } from '../services/api';
 import toast from 'react-hot-toast';
 
-// Initial state
+// Initial state — if a token exists, stay in loading until loadUser finishes (avoids flash redirect to login)
 const initialState = {
   user: null,
   token: localStorage.getItem('token'),
-  isLoading: false,
+  isLoading: !!localStorage.getItem('token'),
   isAuthenticated: false,
 };
 
@@ -94,35 +94,39 @@ export const AuthProvider = ({ children }) => {
   const setAuthToken = (token) => {
     if (token) {
       localStorage.setItem('token', token);
-      authAPI.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      const bearer = `Bearer ${token}`;
+      authAPI.defaults.headers.common['Authorization'] = bearer;
+      api.defaults.headers.common['Authorization'] = bearer;
     } else {
       localStorage.removeItem('token');
       delete authAPI.defaults.headers.common['Authorization'];
+      delete api.defaults.headers.common['Authorization'];
     }
   };
 
   // Load user from token
   const loadUser = async () => {
     const token = localStorage.getItem('token');
-    if (token) {
-      setAuthToken(token);
-      dispatch({ type: AUTH_ACTIONS.LOAD_USER_START });
+    if (!token) {
+      return;
+    }
+    setAuthToken(token);
+    dispatch({ type: AUTH_ACTIONS.LOAD_USER_START });
 
-      try {
-        const response = await authAPI.get('/auth/profile');
-        if (response.data.success) {
-          dispatch({
-            type: AUTH_ACTIONS.LOAD_USER_SUCCESS,
-            payload: { user: response.data.data.user },
-          });
-        } else {
-          dispatch({ type: AUTH_ACTIONS.LOAD_USER_FAILURE });
-          setAuthToken(null);
-        }
-      } catch (error) {
+    try {
+      const response = await authAPI.get('/auth/profile');
+      if (response.data?.success && response.data?.data?.user) {
+        dispatch({
+          type: AUTH_ACTIONS.LOAD_USER_SUCCESS,
+          payload: { user: response.data.data.user },
+        });
+      } else {
         dispatch({ type: AUTH_ACTIONS.LOAD_USER_FAILURE });
         setAuthToken(null);
       }
+    } catch (error) {
+      dispatch({ type: AUTH_ACTIONS.LOAD_USER_FAILURE });
+      setAuthToken(null);
     }
   };
 
@@ -200,7 +204,12 @@ export const AuthProvider = ({ children }) => {
   };
 
   // Logout function
-  const logout = () => {
+  const logout = async () => {
+    try {
+      await authAPI.post('/auth/logout').catch(() => {});
+    } catch (_) {
+      /* ignore */
+    }
     setAuthToken(null);
     dispatch({ type: AUTH_ACTIONS.LOGOUT });
     toast.success('Logged out successfully');
@@ -281,9 +290,25 @@ export const AuthProvider = ({ children }) => {
     return state.user?.role === 'student';
   };
 
-  // Load user on component mount
+  // Load user on mount; sync when another tab logs out or 401 clears storage
   useEffect(() => {
     loadUser();
+
+    const onUnauthorized = () => {
+      setAuthToken(null);
+      dispatch({ type: AUTH_ACTIONS.LOGOUT });
+    };
+    window.addEventListener('auth:unauthorized', onUnauthorized);
+    const onStorage = (e) => {
+      if (e.key === 'token' && !e.newValue) {
+        onUnauthorized();
+      }
+    };
+    window.addEventListener('storage', onStorage);
+    return () => {
+      window.removeEventListener('auth:unauthorized', onUnauthorized);
+      window.removeEventListener('storage', onStorage);
+    };
   }, []);
 
   const value = {

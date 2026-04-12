@@ -7,11 +7,13 @@ import { ClipboardDocumentListIcon, ClockIcon, CheckCircleIcon, PlusIcon } from 
 
 const Assessments = () => {
   const navigate = useNavigate();
-  const { user, isTrainer, isAdmin } = useAuth();
-  
+  const { user, isTrainer, isAdmin, isStudent } = useAuth();
+
+  // Use my-assessments: admin sees all, trainers see by instructor, students see published for enrolled courses
   const { data: assessmentsData, isLoading, error } = useQuery(
-    'assessments',
-    assessmentService.getAssessments
+    ['assessments', 'my', user?._id],
+    () => assessmentService.getMyAssessments(),
+    { enabled: !!user }
   );
 
   if (isLoading) {
@@ -31,7 +33,7 @@ const Assessments = () => {
     );
   }
 
-  const assessments = assessmentsData?.data?.data?.assessments || [];
+  const assessments = assessmentsData?.data?.data?.assessments ?? [];
 
   return (
     <div>
@@ -55,7 +57,19 @@ const Assessments = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {assessments.map((assessment) => (
-          <div key={assessment._id} className="card">
+          <div
+            key={assessment._id}
+            role="button"
+            tabIndex={0}
+            onClick={() => navigate(`/assessments/${assessment._id}`)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                navigate(`/assessments/${assessment._id}`);
+              }
+            }}
+            className="card cursor-pointer hover:ring-2 hover:ring-blue-200 transition-shadow"
+          >
             <div className="card-body">
               <div className="flex items-center mb-4">
                 <ClipboardDocumentListIcon className="h-8 w-8 text-purple-600 mr-3" />
@@ -93,9 +107,17 @@ const Assessments = () => {
         <div className="text-center py-12">
           <ClipboardDocumentListIcon className="mx-auto h-12 w-12 text-gray-400" />
           <h3 className="mt-2 text-sm font-medium text-gray-900">No assessments available</h3>
-          <p className="mt-1 text-sm text-gray-500">
-            Get started by creating a new assessment.
-          </p>
+          {isStudent() ? (
+            <p className="mt-1 text-sm text-gray-500 max-w-md mx-auto">
+              Enroll in a course from the Courses page to see published assessments for your classes.
+            </p>
+          ) : (
+            <p className="mt-1 text-sm text-gray-500">
+              {(isAdmin() || isTrainer()) &&
+                'Create an assessment or ensure you are the instructor on courses that have assessments.'}
+              {!isAdmin() && !isTrainer() && 'Check back later.'}
+            </p>
+          )}
         </div>
       )}
     </div>

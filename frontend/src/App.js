@@ -23,6 +23,7 @@ import Analytics from './pages/Analytics';
 import AnalyticsEntry from './pages/AnalyticsEntry';
 import Reports from './pages/Reports';
 import ReportsGenerate from './pages/ReportsGenerate';
+import ReportView from './pages/ReportView';
 import Users from './pages/Users';
 import UserDetail from './pages/UserDetail';
 import StudentManagement from './pages/StudentManagement';
@@ -73,6 +74,7 @@ function App() {
                 {/* Reports Routes */}
                 <Route path="reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
                 <Route path="reports/generate" element={<ProtectedRoute><ReportsGenerate /></ProtectedRoute>} />
+                <Route path="reports/view/:id" element={<ProtectedRoute><ReportView /></ProtectedRoute>} />
 
                 {/* Analytics Routes */}
                 <Route path="analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />

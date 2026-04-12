@@ -28,12 +28,16 @@ const courseSchema = new mongoose.Schema({
   category: {
     type: String,
     required: [true, 'Course category is required'],
-    enum: ['Computer Science', 'Mathematics', 'Science', 'Engineering', 'Business', 'Arts', 'Language', 'Other'],
+    enum: ['Computer Science', 'Mathematics', 'Science', 'Engineering', 'Business', 'Arts', 'Language', 'Health', 'Other']
+  },
   branch: {
     type: String,
     required: [true, 'Engineering branch is required'],
-    enum: ['CSE', 'CSM', 'EEE', 'ECE', 'EIE', 'MECH', 'CHEM', 'CIVIL', 'CSC', 'DS', 'AI', 'IT', 'BTech', 'MTech', 'BSc', 'MSc', 'PhD', 'Other']
-  }
+    enum: [
+      'CSE', 'CSM', 'EEE', 'ECE', 'EIE', 'MECH', 'CHEM', 'CIVIL',
+      'CSC', 'DS', 'AI', 'AIML', 'IT', 'CSD', 'CYBER',
+      'BTech', 'MTech', 'BSc', 'MSc', 'PhD', 'Other'
+    ]
   },
   level: {
     type: String,

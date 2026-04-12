@@ -14,6 +14,11 @@ import {
 } from '@heroicons/react/24/outline';
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
+const safeFixed = (val, digits = 1) => {
+  const n = Number(val);
+  return Number.isFinite(n) ? n.toFixed(digits) : 'N/A';
+};
+
 const Dashboard = () => {
   const { user, isAdmin, isTrainer, isStudent } = useAuth();
 
@@ -44,7 +49,7 @@ const Dashboard = () => {
     );
   }
 
-  const analytics = dashboardData?.data?.data?.analytics || {};
+  const analytics = dashboardData?.data?.data?.analytics ?? dashboardData?.data?.analytics ?? {};
 
   // Sample data for charts (replace with real data)
   const performanceData = [
@@ -77,7 +82,10 @@ const Dashboard = () => {
                 <dl>
                   <dt className="text-sm font-medium text-gray-500 truncate">Average Score</dt>
                   <dd className="text-lg font-semibold text-gray-900">
-                    {analytics.overallAverage ? `${analytics.overallAverage.toFixed(1)}%` : 'N/A'}
+                    {(() => {
+                      const s = safeFixed(analytics.overallAverage, 1);
+                      return s === 'N/A' ? 'N/A' : `${s}%`;
+                    })()}
                   </dd>
                 </dl>
               </div>
@@ -166,7 +174,9 @@ const Dashboard = () => {
                 cx="50%"
                 cy="50%"
                 labelLine={false}
-                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                label={({ name, percent }) =>
+                  `${name || ''} ${percent != null && Number.isFinite(percent) ? (percent * 100).toFixed(0) : 0}%`
+                }
                 outerRadius={80}
                 fill="#8884d8"
                 dataKey="value"
@@ -265,7 +275,10 @@ const Dashboard = () => {
                 <dl>
                   <dt className="text-sm font-medium text-gray-500 truncate">Class Average</dt>
                   <dd className="text-lg font-semibold text-gray-900">
-                    {analytics.classAverage ? `${analytics.classAverage.toFixed(1)}%` : 'N/A'}
+                    {(() => {
+                      const s = safeFixed(analytics.classAverage, 1);
+                      return s === 'N/A' ? 'N/A' : `${s}%`;
+                    })()}
                   </dd>
                 </dl>
               </div>
@@ -318,7 +331,9 @@ const Dashboard = () => {
                 cx="50%"
                 cy="50%"
                 labelLine={false}
-                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                label={({ name, percent }) =>
+                  `${name || ''} ${percent != null && Number.isFinite(percent) ? (percent * 100).toFixed(0) : 0}%`
+                }
                 outerRadius={80}
                 fill="#8884d8"
                 dataKey="value"

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Navigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { useQuery, useMutation } from 'react-query';
 import { analyticsService, courseService, userService } from '../services/api';
@@ -11,14 +11,30 @@ import {
   UserGroupIcon,
   BookOpenIcon,
   CalendarIcon,
-  ArrowDownTrayIcon,
   ArrowLeftIcon,
   FunnelIcon
 } from '@heroicons/react/24/outline';
+import { appendGeneratedReport } from '../utils/reportsHistory';
+import GeneratedReportDisplay, { normalizeReportRows } from '../components/GeneratedReportDisplay';
+
+function enrichReportPayload(payload) {
+  if (!payload) return payload;
+  const rows = normalizeReportRows(payload.report);
+  const scores = rows.map((r) => r?.data?.averageScore).filter((x) => x != null && Number.isFinite(Number(x)));
+  const avg = scores.length ? scores.reduce((a, b) => a + Number(b), 0) / scores.length : undefined;
+  return {
+    ...payload,
+    summary: {
+      totalRecords: rows.length,
+      ...payload.summary,
+      averageScore: payload.summary?.averageScore ?? avg,
+    },
+  };
+}
 
 const ReportsGenerate = () => {
   const navigate = useNavigate();
-  const { user, isTrainer, isAdmin, isStudent } = useAuth();
+  const { isTrainer, isAdmin, isStudent } = useAuth();
   const [isGenerating, setIsGenerating] = useState(false);
   const [reportData, setReportData] = useState(null);
 
@@ -45,11 +61,28 @@ const ReportsGenerate = () => {
   });
 
   const generatePerformanceReportMutation = useMutation(
-    analyticsService.getPerformanceReport,
+    ({ params }) => analyticsService.getPerformanceReport(params),
     {
-      onSuccess: (response) => {
-        setReportData(response.data);
-        toast.success('Performance report generated successfully!');
+      onSuccess: (response, variables) => {
+        const payload = enrichReportPayload(response.data?.data ?? response.data);
+        setReportData(payload);
+        const { meta } = variables;
+        const titleParts = ['Performance'];
+        if (meta?.courseName) titleParts.push(meta.courseName);
+        else if (meta?.courseId) titleParts.push('Course report');
+        if (meta?.userName) titleParts.push(meta.userName);
+        appendGeneratedReport({
+          kind: 'performance',
+          title: titleParts.join(' — '),
+          courseId: meta?.courseId || undefined,
+          courseName: meta?.courseName || undefined,
+          userId: meta?.userId || undefined,
+          userName: meta?.userName || undefined,
+          period: payload.period,
+          summary: payload.summary,
+          snapshot: payload,
+        });
+        toast.success('Performance report generated — see Reports page to view or export.');
       },
       onError: (error) => {
         toast.error(error.response?.data?.message || 'Failed to generate report');
@@ -61,11 +94,24 @@ const ReportsGenerate = () => {
   );
 
   const generateAttendanceReportMutation = useMutation(
-    analyticsService.getAttendanceReport,
+    ({ params }) => analyticsService.getAttendanceReport(params),
     {
-      onSuccess: (response) => {
-        setReportData(response.data);
-        toast.success('Attendance report generated successfully!');
+      onSuccess: (response, variables) => {
+        const payload = enrichReportPayload(response.data?.data ?? response.data);
+        setReportData(payload);
+        const { meta } = variables;
+        appendGeneratedReport({
+          kind: 'attendance',
+          title: meta?.courseName
+            ? `Attendance — ${meta.courseName}`
+            : 'Attendance report',
+          courseId: meta?.courseId || undefined,
+          courseName: meta?.courseName || undefined,
+          period: payload.period,
+          summary: payload.summary,
+          snapshot: payload,
+        });
+        toast.success('Attendance report generated — see Reports page to view or export.');
       },
       onError: (error) => {
         toast.error(error.response?.data?.message || 'Failed to generate report');
@@ -83,49 +129,45 @@ const ReportsGenerate = () => {
     setIsGenerating(true);
     setReportData(null);
 
+    if (data.reportType === 'performance' && isTrainer() && !data.course) {
+      toast.error('Please select a course for this report.');
+      setIsGenerating(false);
+      return;
+    }
+
     const params = {
-      startDate: data.startDate ? new Date(data.startDate) : undefined,
-      endDate: data.endDate ? new Date(data.endDate) : undefined,
-      course: data.course,
-      user: data.user,
-      format: data.format || 'json'
+      format: data.format || 'json',
+      courseId: data.course || undefined,
+      userId: data.user || undefined,
+    };
+    if (data.startDate) params.startDate = new Date(data.startDate).toISOString();
+    if (data.endDate) params.endDate = new Date(data.endDate).toISOString();
+
+    const courses = coursesData?.data?.data?.courses || [];
+    const users = usersData?.data?.data?.users || [];
+    const courseDoc = data.course ? courses.find((c) => c._id === data.course) : null;
+    const userDoc = data.user ? users.find((u) => u._id === data.user) : null;
+    const meta = {
+      courseId: data.course || undefined,
+      courseName: courseDoc?.title || courseDoc?.code || null,
+      userId: data.user || undefined,
+      userName: userDoc ? `${userDoc.firstName} ${userDoc.lastName}`.trim() : null,
+      reportType: data.reportType,
     };
 
     if (data.reportType === 'performance') {
-      generatePerformanceReportMutation.mutate(params);
+      generatePerformanceReportMutation.mutate({ params, meta });
     } else if (data.reportType === 'attendance') {
-      generateAttendanceReportMutation.mutate(params);
+      if (!data.course) {
+        toast.error('Attendance reports require a course.');
+        setIsGenerating(false);
+        return;
+      }
+      generateAttendanceReportMutation.mutate({ params, meta });
+    } else {
+      toast.error('This report type is not wired to the API yet.');
+      setIsGenerating(false);
     }
-  };
-
-  const exportToCSV = (data, filename) => {
-    if (!data || !data.report) return;
-
-    const csvContent = [
-      Object.keys(data.report[0] || {}).join(','),
-      ...data.report.map(row => Object.values(row).join(','))
-    ].join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${filename}.csv`;
-    a.click();
-    window.URL.revokeObjectURL(url);
-  };
-
-  const exportToJSON = (data, filename) => {
-    if (!data) return;
-
-    const jsonContent = JSON.stringify(data, null, 2);
-    const blob = new Blob([jsonContent], { type: 'application/json' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${filename}.json`;
-    a.click();
-    window.URL.revokeObjectURL(url);
   };
 
   const reportTypes = [
@@ -141,6 +183,10 @@ const ReportsGenerate = () => {
     { value: 'last90days', label: 'Last 90 Days' },
     { value: 'custom', label: 'Custom Range' }
   ];
+
+  if (isStudent()) {
+    return <Navigate to="/reports" replace />;
+  }
 
   return (
     <div className="max-w-6xl mx-auto">
@@ -359,98 +405,11 @@ const ReportsGenerate = () => {
         </div>
       </form>
 
-      {/* Report Results */}
       {reportData && (
-        <div className="card mt-8">
-          <div className="card-header">
-            <h3 className="text-lg font-medium text-gray-900 flex items-center">
-              <DocumentTextIcon className="h-5 w-5 mr-2" />
-              Report Results
-            </h3>
-            <div className="flex items-center space-x-2">
-              <button
-                onClick={() => exportToCSV(reportData, `${reportType}-report`)}
-                className="btn btn-secondary btn-sm"
-              >
-                <ArrowDownTrayIcon className="h-4 w-4 mr-2" />
-                Export CSV
-              </button>
-              <button
-                onClick={() => exportToJSON(reportData, `${reportType}-report`)}
-                className="btn btn-secondary btn-sm"
-              >
-                <ArrowDownTrayIcon className="h-4 w-4 mr-2" />
-                Export JSON
-              </button>
-            </div>
-          </div>
-          <div className="card-body">
-            {/* Report Summary */}
-            <div className="mb-6">
-              <h4 className="text-lg font-medium text-gray-900 mb-4">Summary</h4>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="bg-blue-50 rounded-lg p-4">
-                  <p className="text-sm text-blue-600 font-medium">Total Records</p>
-                  <p className="text-2xl font-bold text-blue-900">
-                    {reportData.summary?.totalRecords || 0}
-                  </p>
-                </div>
-                <div className="bg-green-50 rounded-lg p-4">
-                  <p className="text-sm text-green-600 font-medium">Average Score</p>
-                  <p className="text-2xl font-bold text-green-900">
-                    {reportData.summary?.averageScore?.toFixed(1) || 'N/A'}
-                  </p>
-                </div>
-                <div className="bg-yellow-50 rounded-lg p-4">
-                  <p className="text-sm text-yellow-600 font-medium">Pass Rate</p>
-                  <p className="text-2xl font-bold text-yellow-900">
-                    {reportData.summary?.passRate ? `${reportData.summary.passRate.toFixed(1)}%` : 'N/A'}
-                  </p>
-                </div>
-                <div className="bg-purple-50 rounded-lg p-4">
-                  <p className="text-sm text-purple-600 font-medium">Completion Rate</p>
-                  <p className="text-2xl font-bold text-purple-900">
-                    {reportData.summary?.completionRate ? `${reportData.summary.completionRate.toFixed(1)}%` : 'N/A'}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Report Data Table */}
-            <div>
-              <h4 className="text-lg font-medium text-gray-900 mb-4">Detailed Data</h4>
-              <div className="table-responsive max-h-96 overflow-y-auto">
-                <table className="table">
-                  <thead className="table-header sticky top-0">
-                    <tr>
-                      {reportData.report?.[0] && Object.keys(reportData.report[0]).map(key => (
-                        <th key={key} className="table-header-cell">
-                          {key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1')}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody className="table-body">
-                    {reportData.report?.slice(0, 50).map((row, index) => (
-                      <tr key={index} className="table-row">
-                        {Object.values(row).map((value, cellIndex) => (
-                          <td key={cellIndex} className="table-cell">
-                            {typeof value === 'object' ? JSON.stringify(value) : value}
-                          </td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              {reportData.report?.length > 50 && (
-                <p className="text-sm text-gray-500 mt-2">
-                  Showing first 50 of {reportData.report.length} records. Export to see all data.
-                </p>
-              )}
-            </div>
-          </div>
-        </div>
+        <GeneratedReportDisplay
+          reportData={reportData}
+          filePrefix={`${reportType || 'report'}-report`}
+        />
       )}
     </div>
   );

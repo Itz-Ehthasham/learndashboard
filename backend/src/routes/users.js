@@ -5,6 +5,14 @@ const { validateUserUpdate } = require('../middleware/validation');
 
 const router = express.Router();
 
+async function countActiveAdmins(excludeUserId) {
+  const q = { role: 'admin', isActive: true };
+  if (excludeUserId) {
+    q._id = { $ne: excludeUserId };
+  }
+  return User.countDocuments(q);
+}
+
 // @route   GET /api/users
 // @desc    Get all users (admin, trainer, or student for own data)
 // @access  Private
@@ -123,13 +131,35 @@ router.put('/:id', authenticate, checkResourceAccess('user'), validateUserUpdate
 
     // Update fields based on user role
     if (req.user.role === 'admin') {
-      // Admin can update all fields including role and isActive
+      const targetRole = role !== undefined ? role : user.role;
+      const targetActive = isActive !== undefined ? isActive : user.isActive;
+
+      if (user.role === 'admin' && targetRole !== 'admin') {
+        const otherAdmins = await countActiveAdmins(user._id);
+        if (otherAdmins < 1) {
+          return res.status(400).json({
+            success: false,
+            message: 'Cannot change role: at least one active administrator must remain.'
+          });
+        }
+      }
+
+      if (user.role === 'admin' && targetActive === false) {
+        const otherAdmins = await countActiveAdmins(user._id);
+        if (otherAdmins < 1) {
+          return res.status(400).json({
+            success: false,
+            message: 'Cannot deactivate the last active administrator.'
+          });
+        }
+      }
+
       if (firstName) user.firstName = firstName;
       if (lastName) user.lastName = lastName;
       if (phone !== undefined) user.phone = phone;
       if (dateOfBirth !== undefined) user.dateOfBirth = dateOfBirth;
       if (address) user.address = address;
-      if (role) user.role = role;
+      if (role !== undefined) user.role = role;
       if (isActive !== undefined) user.isActive = isActive;
     } else {
       // Users can only update their own profile (excluding role and isActive)
@@ -177,6 +207,16 @@ router.delete('/:id', authenticate, authorize('admin'), async (req, res) => {
         success: false,
         message: 'You cannot delete your own account'
       });
+    }
+
+    if (user.role === 'admin') {
+      const otherAdmins = await countActiveAdmins(user._id);
+      if (otherAdmins < 1) {
+        return res.status(400).json({
+          success: false,
+          message: 'Cannot delete the last administrator account.'
+        });
+      }
     }
 
     await User.findByIdAndDelete(req.params.id);

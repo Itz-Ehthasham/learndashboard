@@ -140,13 +140,30 @@ const validateCourseCreation = [
     .withMessage('Course code is required')
     .matches(/^[A-Z]{2,4}\d{3,4}$/)
     .withMessage('Course code must be in format like CS101 or MATH2001'),
-    
+
   body('instructor')
+    .optional({ values: 'falsy' })
     .isMongoId()
     .withMessage('Valid instructor ID is required'),
-    
+
+  body('instructor')
+    .custom((value, { req }) => {
+      if (req.user?.role === 'admin' && (value === undefined || value === null || value === '')) {
+        throw new Error('Instructor is required when creating a course as an administrator');
+      }
+      return true;
+    }),
+
+  body('branch')
+    .isIn([
+      'CSE', 'CSM', 'EEE', 'ECE', 'EIE', 'MECH', 'CHEM', 'CIVIL',
+      'CSC', 'DS', 'AI', 'AIML', 'IT', 'CSD', 'CYBER',
+      'BTech', 'MTech', 'BSc', 'MSc', 'PhD', 'Other'
+    ])
+    .withMessage('Please select a valid engineering branch'),
+
   body('category')
-    .isIn(['Computer Science', 'Mathematics', 'Science', 'Engineering', 'Business', 'Arts', 'Language', 'Other'])
+    .isIn(['Computer Science', 'Mathematics', 'Science', 'Engineering', 'Business', 'Arts', 'Language', 'Health', 'Other'])
     .withMessage('Please select a valid category'),
     
   body('level')
@@ -174,13 +191,15 @@ const validateCourseCreation = [
     .withMessage('Please provide a valid end date'),
     
   body('schedule.startTime')
+    .optional({ values: 'falsy' })
     .matches(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/)
     .withMessage('Start time must be in HH:MM format'),
-    
+
   body('schedule.endTime')
+    .optional({ values: 'falsy' })
     .matches(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/)
     .withMessage('End time must be in HH:MM format'),
-    
+
   validate
 ];
 
@@ -203,7 +222,7 @@ const validateCourseUpdate = [
     
   body('category')
     .optional()
-    .isIn(['Computer Science', 'Mathematics', 'Science', 'Engineering', 'Business', 'Arts', 'Language', 'Other'])
+    .isIn(['Computer Science', 'Mathematics', 'Science', 'Engineering', 'Business', 'Arts', 'Language', 'Health', 'Other'])
     .withMessage('Please select a valid category'),
     
   body('level')
@@ -277,6 +296,11 @@ const validateAssessmentCreation = [
     .optional()
     .isLength({ max: 2000 })
     .withMessage('Instructions cannot exceed 2000 characters'),
+
+  body('isPublished')
+    .optional()
+    .isBoolean()
+    .withMessage('isPublished must be true or false'),
     
   validate
 ];

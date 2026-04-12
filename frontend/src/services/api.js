@@ -28,12 +28,27 @@ const addAuthToken = (config) => {
   return config;
 };
 
-// Response interceptor to handle errors
+// Response interceptor — 401 on protected routes clears session (not on failed login/register)
 const handleInterceptorError = (error) => {
-  if (error.response?.status === 401) {
-    // Token expired or invalid
+  const status = error.response?.status;
+  const reqPath = `${error.config?.baseURL || ''}${error.config?.url || ''}`;
+  const isAuthAttempt =
+    reqPath.includes('/auth/login') ||
+    reqPath.includes('/auth/register') ||
+    (error.config?.url || '').includes('/auth/login') ||
+    (error.config?.url || '').includes('/auth/register');
+
+  if (status === 401 && !isAuthAttempt) {
     localStorage.removeItem('token');
-    window.location.href = '/login';
+    try {
+      window.dispatchEvent(new CustomEvent('auth:unauthorized'));
+    } catch (_) {
+      /* ignore */
+    }
+    const path = window.location?.pathname || '';
+    if (!path.includes('/login') && !path.includes('/register')) {
+      window.location.href = '/login';
+    }
   }
   return Promise.reject(error);
 };

@@ -40,7 +40,13 @@ const CourseCreate = () => {
       navigate(`/courses/${response.data.data.course._id}`);
     },
     onError: (error) => {
-      toast.error(error.response?.data?.message || 'Failed to create course');
+      const msg = error.response?.data?.message;
+      const errs = error.response?.data?.errors;
+      const first =
+        Array.isArray(errs) && errs.length > 0
+          ? errs[0].msg || errs[0].message
+          : null;
+      toast.error(first || msg || 'Failed to create course');
     },
     onSettled: () => {
       setIsSubmitting(false);
@@ -49,25 +55,45 @@ const CourseCreate = () => {
 
   const onSubmit = async (data) => {
     setIsSubmitting(true);
-    
-    // Format the data for API
+
+    const start = data.startDate ? new Date(data.startDate) : null;
+    const end = data.endDate ? new Date(data.endDate) : null;
+    if (!start || !end) {
+      toast.error('Start date and end date are required.');
+      setIsSubmitting(false);
+      return;
+    }
+
     const courseData = {
-      ...data,
-      startDate: data.startDate ? new Date(data.startDate) : undefined,
-      endDate: data.endDate ? new Date(data.endDate) : undefined,
+      title: data.title?.trim(),
+      description: data.description?.trim(),
+      code: (data.code || '').trim().toUpperCase(),
+      category: data.category,
+      branch: data.branch,
+      level: data.level,
+      credits: Number(data.credits),
+      duration: Number(data.duration),
+      maxStudents: Number(data.maxStudents),
       schedule: {
-        startDate: data.startDate ? new Date(data.startDate) : undefined,
-        endDate: data.endDate ? new Date(data.endDate) : undefined,
-        daysOfWeek: data.daysOfWeek || [],
-        startTime: data.startTime || '',
-        endTime: data.endTime || ''
-      }
+        startDate: start.toISOString(),
+        endDate: end.toISOString(),
+        daysOfWeek: Array.isArray(data.daysOfWeek) ? data.daysOfWeek : data.daysOfWeek ? [data.daysOfWeek] : [],
+        startTime: data.startTime?.trim() || '09:00',
+        endTime: data.endTime?.trim() || '17:00'
+      },
+      tags: []
     };
 
-    // Remove schedule fields from main data
-    delete courseData.daysOfWeek;
-    delete courseData.startTime;
-    delete courseData.endTime;
+    if (isAdmin()) {
+      if (!data.instructor) {
+        toast.error('Please assign an instructor (trainer).');
+        setIsSubmitting(false);
+        return;
+      }
+      courseData.instructor = data.instructor;
+    } else {
+      courseData.instructor = user?._id;
+    }
 
     createCourseMutation.mutate(courseData);
   };
@@ -82,7 +108,9 @@ const CourseCreate = () => {
   ];
 
   const branches = [
-    'CSE', 'CSM', 'EEE', 'ECE', 'EIE', 'MECH', 'CHEM', 'CIVIL', 'CSC', 'DS', 'AI', 'IT', 'BTech', 'MTech', 'BSc', 'MSc', 'PhD', 'Other'
+    'CSE', 'CSM', 'EEE', 'ECE', 'EIE', 'MECH', 'CHEM', 'CIVIL',
+    'CSC', 'DS', 'AI', 'AIML', 'IT', 'CSD', 'CYBER',
+    'BTech', 'MTech', 'BSc', 'MSc', 'PhD', 'Other'
   ];
 
   const levels = ['Beginner', 'Intermediate', 'Advanced'];
@@ -152,8 +180,8 @@ const CourseCreate = () => {
                   {...register('code', {
                     required: 'Course code is required',
                     pattern: {
-                      value: /^[A-Z0-9-]+$/,
-                      message: 'Course code must contain only uppercase letters, numbers, and hyphens'
+                      value: /^[A-Za-z]{2,4}\d{3,4}$/,
+                      message: 'Use format like CS101 or MATH2001 (2–4 letters + 3–4 digits, no spaces)'
                     }
                   })}
                   type="text"
@@ -195,7 +223,11 @@ const CourseCreate = () => {
                 <select
                   {...register('category', { required: 'Course category is required' })}
                   className="form-input"
+                  defaultValue=""
                 >
+                  <option value="" disabled>
+                    Select category
+                  </option>
                   {categories.map((cat) => (
                     <option key={cat} value={cat}>
                       {cat}
@@ -376,10 +408,13 @@ const CourseCreate = () => {
                   Start Date
                 </label>
                 <input
-                  {...register('startDate')}
+                  {...register('startDate', { required: 'Start date is required' })}
                   type="date"
                   className="form-input"
                 />
+                {errors.startDate && (
+                  <p className="form-error">{errors.startDate.message}</p>
+                )}
               </div>
 
               <div>
@@ -387,10 +422,13 @@ const CourseCreate = () => {
                   End Date
                 </label>
                 <input
-                  {...register('endDate')}
+                  {...register('endDate', { required: 'End date is required' })}
                   type="date"
                   className="form-input"
                 />
+                {errors.endDate && (
+                  <p className="form-error">{errors.endDate.message}</p>
+                )}
               </div>
             </div>
 
@@ -452,7 +490,10 @@ const CourseCreate = () => {
                   Assign Instructor
                 </label>
                 <select
-                  {...register('instructor')}
+                  {...register(
+                    'instructor',
+                    isAdmin() ? { required: 'Please select a trainer as instructor' } : {}
+                  )}
                   className="form-input"
                   disabled={usersLoading}
                 >

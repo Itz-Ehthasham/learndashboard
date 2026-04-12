@@ -212,6 +212,18 @@ const AssessmentCreate = () => {
             </div>
 
             <div>
+              <label htmlFor="instructions" className="form-label">
+                Instructions for students
+              </label>
+              <textarea
+                {...register('instructions')}
+                rows={3}
+                className="form-input"
+                placeholder="Optional: rules, materials allowed, time limits…"
+              />
+            </div>
+
+            <div>
               <label htmlFor="course" className="form-label">
                 Course *
               </label>

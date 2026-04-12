@@ -6,6 +6,16 @@ const { validateAssessmentCreation, validateAssessmentUpdate } = require('../mid
 
 const router = express.Router();
 
+/** Active enrollment must match the same `enrolledStudents` subdocument. */
+const activeEnrollmentCourseQuery = (userId) => ({
+  enrolledStudents: {
+    $elemMatch: {
+      student: userId,
+      status: 'active'
+    }
+  }
+});
+
 // @route   GET /api/assessments
 // @desc    Get all assessments
 // @access  Private
@@ -28,32 +38,17 @@ router.get('/', authenticate, async (req, res) => {
     const sort = {};
     sort[sortBy] = sortOrder === 'asc' ? 1 : -1;
 
-    // Execute query with pagination
-    let assessmentsQuery = Assessment.find(query)
-      .populate('course', 'title code')
-      .populate('instructor', 'firstName lastName email')
-      .sort(sort)
-      .limit(limit * 1)
-      .skip((page - 1) * limit);
-
     // Filter based on user role
     if (req.user.role === 'student') {
-      // Students can only see assessments for courses they're enrolled in
-      const enrolledCourses = await Course.find({
-        'enrolledStudents.student': req.user._id,
-        'enrolledStudents.status': 'active'
-      }).select('_id');
-      
-      const courseIds = enrolledCourses.map(course => course._id);
+      // Students only see published assessments for courses they're actively enrolled in
+      const enrolledCourses = await Course.find(activeEnrollmentCourseQuery(req.user._id)).select('_id');
+
+      const courseIds = enrolledCourses.map((c) => c._id);
       query.course = { $in: courseIds };
+      query.isPublished = true;
     } else if (req.user.role === 'trainer') {
-      // Trainers can only see assessments for their courses
-      const instructorCourses = await Course.find({
-        instructor: req.user._id
-      }).select('_id');
-      
-      const courseIds = instructorCourses.map(course => course._id);
-      query.course = { $in: courseIds };
+      // Trainers see assessments they instruct (matches Assessment.instructor; avoids empty $in: [])
+      query.instructor = req.user._id;
     }
 
     const assessments = await Assessment.find(query)
@@ -86,6 +81,83 @@ router.get('/', authenticate, async (req, res) => {
   }
 });
 
+// @route   GET /api/assessments/my-assessments
+// @desc    Get assessments for current user
+// @access  Private
+// NOTE: Must be registered before GET /:id so "my-assessments" is not captured as an id.
+router.get('/my-assessments', authenticate, async (req, res) => {
+  try {
+    let assessments;
+
+    if (req.user.role === 'trainer') {
+      assessments = await Assessment.find({ instructor: req.user._id, isActive: true })
+        .populate('course', 'title code')
+        .populate('submissions.student', 'firstName lastName email')
+        .sort({ createdAt: -1 });
+    } else if (req.user.role === 'student') {
+      const enrolledCourses = await Course.find(activeEnrollmentCourseQuery(req.user._id)).select('_id');
+
+      const courseIds = enrolledCourses.map((c) => c._id);
+
+      assessments = await Assessment.find({
+        course: { $in: courseIds },
+        isActive: true,
+        isPublished: true
+      })
+        .populate('course', 'title code')
+        .populate('instructor', 'firstName lastName email')
+        .sort({ scheduledDate: 1 });
+    } else {
+      assessments = await Assessment.find({ isActive: true })
+        .populate('course', 'title code')
+        .populate('instructor', 'firstName lastName email')
+        .sort({ createdAt: -1 });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        assessments
+      }
+    });
+  } catch (error) {
+    console.error('Get my assessments error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while fetching assessments'
+    });
+  }
+});
+
+// @route   GET /api/assessments/upcoming
+// @desc    Get upcoming assessments (student only)
+// @access  Private (Student)
+router.get('/upcoming', authenticate, authorize('student'), async (req, res) => {
+  try {
+    const enrolledCourses = await Course.find(activeEnrollmentCourseQuery(req.user._id)).select('_id');
+
+    const courseIds = enrolledCourses.map((c) => c._id);
+
+    const upcomingAssessments = await Assessment.findUpcomingAssessments()
+      .then((list) => list.filter((assessment) =>
+        courseIds.some((courseId) => courseId.toString() === assessment.course._id.toString())
+      ));
+
+    res.json({
+      success: true,
+      data: {
+        assessments: upcomingAssessments
+      }
+    });
+  } catch (error) {
+    console.error('Get upcoming assessments error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while fetching upcoming assessments'
+    });
+  }
+});
+
 // @route   GET /api/assessments/:id
 // @desc    Get assessment by ID
 // @access  Private
@@ -99,6 +171,13 @@ router.get('/:id', authenticate, checkResourceAccess('assessment'), async (req, 
       .populate('submissions.gradedBy', 'firstName lastName email');
 
     if (!assessment) {
+      return res.status(404).json({
+        success: false,
+        message: 'Assessment not found'
+      });
+    }
+
+    if (req.user.role === 'student' && !assessment.isPublished) {
       return res.status(404).json({
         success: false,
         message: 'Assessment not found'
@@ -148,7 +227,8 @@ router.post('/', authenticate, authorize('admin', 'trainer'), validateAssessment
       maxAttempts,
       randomizeQuestions,
       showResults,
-      showCorrectAnswers
+      showCorrectAnswers,
+      isPublished
     } = req.body;
 
     // Verify course exists
@@ -186,7 +266,9 @@ router.post('/', authenticate, authorize('admin', 'trainer'), validateAssessment
       maxAttempts: maxAttempts || 1,
       randomizeQuestions: randomizeQuestions || false,
       showResults: showResults !== undefined ? showResults : true,
-      showCorrectAnswers: showCorrectAnswers || false
+      showCorrectAnswers: showCorrectAnswers || false,
+      // Default published so enrolled students can see and submit; set false for drafts
+      isPublished: isPublished !== false
     });
 
     await assessment.save();
@@ -344,7 +426,7 @@ router.post('/:id/submit', authenticate, authorize('student'), async (req, res) 
     }
 
     const assessment = await Assessment.findById(req.params.id)
-      .populate('course', 'title code');
+      .populate('course', 'title code enrolledStudents');
 
     if (!assessment) {
       return res.status(404).json({
@@ -424,91 +506,6 @@ router.post('/:id/grade/:studentId', authenticate, authorize('admin', 'trainer')
     res.status(500).json({
       success: false,
       message: error.message || 'Server error while grading submission'
-    });
-  }
-});
-
-// @route   GET /api/assessments/my-assessments
-// @desc    Get assessments for current user
-// @access  Private
-router.get('/my-assessments', authenticate, async (req, res) => {
-  try {
-    let assessments;
-    
-    if (req.user.role === 'trainer') {
-      // Get assessments created by this instructor
-      assessments = await Assessment.find({ instructor: req.user._id, isActive: true })
-        .populate('course', 'title code')
-        .populate('submissions.student', 'firstName lastName email')
-        .sort({ createdAt: -1 });
-    } else if (req.user.role === 'student') {
-      // Get assessments for courses student is enrolled in
-      const enrolledCourses = await Course.find({
-        'enrolledStudents.student': req.user._id,
-        'enrolledStudents.status': 'active'
-      }).select('_id');
-      
-      const courseIds = enrolledCourses.map(course => course._id);
-      
-      assessments = await Assessment.find({
-        course: { $in: courseIds },
-        isActive: true,
-        isPublished: true
-      })
-        .populate('course', 'title code')
-        .populate('instructor', 'firstName lastName email')
-        .sort({ scheduledDate: 1 });
-    } else {
-      // Admin can see all assessments
-      assessments = await Assessment.find({ isActive: true })
-        .populate('course', 'title code')
-        .populate('instructor', 'firstName lastName email')
-        .sort({ createdAt: -1 });
-    }
-
-    res.json({
-      success: true,
-      data: {
-        assessments
-      }
-    });
-  } catch (error) {
-    console.error('Get my assessments error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Server error while fetching assessments'
-    });
-  }
-});
-
-// @route   GET /api/assessments/upcoming
-// @desc    Get upcoming assessments (student only)
-// @access  Private (Student)
-router.get('/upcoming', authenticate, authorize('student'), async (req, res) => {
-  try {
-    const enrolledCourses = await Course.find({
-      'enrolledStudents.student': req.user._id,
-      'enrolledStudents.status': 'active'
-    }).select('_id');
-    
-    const courseIds = enrolledCourses.map(course => course._id);
-    
-    const upcomingAssessments = await Assessment.findUpcomingAssessments()
-      .then(assessments => assessments.filter(assessment => 
-        courseIds.some(courseId => courseId.toString() === assessment.course._id.toString())
-      ));
-
-    res.json({
-      success: true,
-      data: {
-        assessments: upcomingAssessments
-      }
-    });
-  } catch (error) {
-    console.error('Get upcoming assessments error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Server error while fetching upcoming assessments'
     });
   }
 });
