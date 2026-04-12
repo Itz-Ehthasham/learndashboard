@@ -13,27 +13,24 @@ async function countActiveAdmins(excludeUserId) {
   return User.countDocuments(q);
 }
 
-// @route   GET /api/users
-// @desc    Get all users (admin, trainer, or student for own data)
-// @access  Private
 router.get('/', authenticate, async (req, res) => {
   try {
     const { page = 1, limit = 10, role, search, sortBy = 'createdAt', sortOrder = 'desc' } = req.query;
 
-    // Build query
+    
     const query = {};
     
-    // Role-based filtering
+    
     if (req.user.role === 'student') {
-      // Students can only see themselves
+      
       query._id = req.user._id;
     } else if (req.user.role === 'trainer') {
-      // Trainers can see students and other trainers, but not admins
+      
       if (role && role !== 'admin') {
         query.role = role;
       }
     } else if (req.user.role === 'admin') {
-      // Admins can see everyone
+      
       if (role) {
         query.role = role;
       }
@@ -47,11 +44,11 @@ router.get('/', authenticate, async (req, res) => {
       ];
     }
 
-    // Build sort object
+    
     const sort = {};
     sort[sortBy] = sortOrder === 'asc' ? 1 : -1;
 
-    // Execute query with pagination
+    
     const users = await User.find(query)
       .select('-password')
       .sort(sort)
@@ -59,7 +56,7 @@ router.get('/', authenticate, async (req, res) => {
       .skip((page - 1) * limit)
       .populate('enrolledCourses', 'title code');
 
-    // Get total count for pagination
+    
     const total = await User.countDocuments(query);
 
     res.json({
@@ -82,9 +79,6 @@ router.get('/', authenticate, async (req, res) => {
   }
 });
 
-// @route   GET /api/users/:id
-// @desc    Get user by ID
-// @access  Private
 router.get('/:id', authenticate, checkResourceAccess('user'), async (req, res) => {
   try {
     const user = await User.findById(req.params.id)
@@ -114,9 +108,6 @@ router.get('/:id', authenticate, checkResourceAccess('user'), async (req, res) =
   }
 });
 
-// @route   PUT /api/users/:id
-// @desc    Update user
-// @access  Private
 router.put('/:id', authenticate, checkResourceAccess('user'), validateUserUpdate, async (req, res) => {
   try {
     const { firstName, lastName, phone, dateOfBirth, address, role, isActive } = req.body;
@@ -129,7 +120,7 @@ router.put('/:id', authenticate, checkResourceAccess('user'), validateUserUpdate
       });
     }
 
-    // Update fields based on user role
+    
     if (req.user.role === 'admin') {
       const targetRole = role !== undefined ? role : user.role;
       const targetActive = isActive !== undefined ? isActive : user.isActive;
@@ -162,7 +153,7 @@ router.put('/:id', authenticate, checkResourceAccess('user'), validateUserUpdate
       if (role !== undefined) user.role = role;
       if (isActive !== undefined) user.isActive = isActive;
     } else {
-      // Users can only update their own profile (excluding role and isActive)
+      
       if (firstName) user.firstName = firstName;
       if (lastName) user.lastName = lastName;
       if (phone !== undefined) user.phone = phone;
@@ -188,9 +179,6 @@ router.put('/:id', authenticate, checkResourceAccess('user'), validateUserUpdate
   }
 });
 
-// @route   DELETE /api/users/:id
-// @desc    Delete user (admin only)
-// @access  Private (Admin)
 router.delete('/:id', authenticate, authorize('admin'), async (req, res) => {
   try {
     const user = await User.findById(req.params.id);
@@ -201,7 +189,7 @@ router.delete('/:id', authenticate, authorize('admin'), async (req, res) => {
       });
     }
 
-    // Prevent admin from deleting themselves
+    
     if (user._id.toString() === req.user._id.toString()) {
       return res.status(400).json({
         success: false,
@@ -234,9 +222,6 @@ router.delete('/:id', authenticate, authorize('admin'), async (req, res) => {
   }
 });
 
-// @route   POST /api/users/:id/deactivate
-// @desc    Deactivate user (admin only)
-// @access  Private (Admin)
 router.post('/:id/deactivate', authenticate, authorize('admin'), async (req, res) => {
   try {
     const user = await User.findById(req.params.id);
@@ -247,7 +232,7 @@ router.post('/:id/deactivate', authenticate, authorize('admin'), async (req, res
       });
     }
 
-    // Prevent admin from deactivating themselves
+    
     if (user._id.toString() === req.user._id.toString()) {
       return res.status(400).json({
         success: false,
@@ -274,9 +259,6 @@ router.post('/:id/deactivate', authenticate, authorize('admin'), async (req, res
   }
 });
 
-// @route   POST /api/users/:id/activate
-// @desc    Activate user (admin only)
-// @access  Private (Admin)
 router.post('/:id/activate', authenticate, authorize('admin'), async (req, res) => {
   try {
     const user = await User.findById(req.params.id);
@@ -306,9 +288,6 @@ router.post('/:id/activate', authenticate, authorize('admin'), async (req, res) 
   }
 });
 
-// @route   GET /api/users/stats/overview
-// @desc    Get user statistics overview (admin only)
-// @access  Private (Admin)
 router.get('/stats/overview', authenticate, authorize('admin'), async (req, res) => {
   try {
     const totalUsers = await User.countDocuments();
@@ -347,9 +326,6 @@ router.get('/stats/overview', authenticate, authorize('admin'), async (req, res)
   }
 });
 
-// @route   GET /api/users/search
-// @desc    Search users (admin only)
-// @access  Private (Admin)
 router.get('/search', authenticate, authorize('admin'), async (req, res) => {
   try {
     const { q, limit = 10 } = req.query;

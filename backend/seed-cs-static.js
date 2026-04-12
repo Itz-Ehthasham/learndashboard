@@ -1,11 +1,5 @@
-/**
- * Seeds 10 engineering/computing courses and 20 published static assessments (CSE / CS engineering topics).
- * Branches: CSE, CSC, AIML, DS, CSD, CYBER, CSM, CIVIL, IT, EEE.
- * Requires at least one trainer (run seed-data.js first).
- *
- * Usage:  node seed-cs-static.js
- *     or: npm run seed:cs
- */
+
+
 require('dotenv').config();
 const mongoose = require('mongoose');
 const User = require('./src/models/User');
@@ -33,7 +27,6 @@ const scheduleTemplate = () => ({
   endTime: '11:30',
 });
 
-/** One row per course code; branch drives programme */
 const COURSE_SPECS = [
   {
     branch: 'CSE',
@@ -157,10 +150,6 @@ const COURSE_SPECS = [
   },
 ];
 
-/**
- * 20 CSE-themed assessments: courseCode + short title + assessment type + question bank id.
- * Titles kept ≤100 chars for schema.
- */
 const ASSESSMENT_SPECS = [
   { courseCode: 'CS1001', title: 'CS1001 Quiz: Programming Fundamentals', assessmentType: 'quiz', bank: 0 },
   { courseCode: 'CS1001', title: 'CS1001: OOP & Modularity', assessmentType: 'quiz', bank: 1 },
@@ -184,9 +173,8 @@ const ASSESSMENT_SPECS = [
   { courseCode: 'CS1010', title: 'CS1010: Digital Logic & Embedded Basics', assessmentType: 'quiz', bank: 19 },
 ];
 
-/** Two MCQs per assessment; 50 pts each → 100 total */
 const QUESTION_BANKS = [
-  // 0 — Programming fundamentals
+  
   [
     { q: 'Which keyword declares a constant in JavaScript?', o: ['var', 'let', 'const', 'static'], c: 'const' },
     {
@@ -195,7 +183,7 @@ const QUESTION_BANKS = [
       c: 'O(1)',
     },
   ],
-  // 1 — OOP
+  
   [
     {
       q: 'Encapsulation primarily means:',
@@ -218,7 +206,7 @@ const QUESTION_BANKS = [
       c: 'One interface, multiple implementations',
     },
   ],
-  // 2 — Testing / debugging
+  
   [
     {
       q: 'A unit test typically targets:',
@@ -236,7 +224,7 @@ const QUESTION_BANKS = [
       c: 'Ensure new changes do not break existing behaviour',
     },
   ],
-  // 3 — DSA core
+  
   [
     {
       q: 'Which structure follows LIFO?',
@@ -249,7 +237,7 @@ const QUESTION_BANKS = [
       c: 'O(log n)',
     },
   ],
-  // 4 — Trees / heaps
+  
   [
     {
       q: 'A binary max-heap property at each node means:',
@@ -267,7 +255,7 @@ const QUESTION_BANKS = [
       c: 'Sorted key order',
     },
   ],
-  // 5 — Graphs / hashing
+  
   [
     {
       q: 'Average-case lookup in a good hash table is often:',
@@ -280,7 +268,7 @@ const QUESTION_BANKS = [
       c: 'Queue',
     },
   ],
-  // 6 — ML foundations
+  
   [
     {
       q: 'Training with labeled input–output pairs is:',
@@ -298,7 +286,7 @@ const QUESTION_BANKS = [
       c: 'Estimate generalization performance',
     },
   ],
-  // 7 — Neural networks
+  
   [
     {
       q: 'A common activation for hidden layers in deep nets is:',
@@ -311,7 +299,7 @@ const QUESTION_BANKS = [
       c: 'Gradients for network weights',
     },
   ],
-  // 8 — Stats / DS
+  
   [
     {
       q: 'Which is most sensitive to extreme outliers among these?',
@@ -324,7 +312,7 @@ const QUESTION_BANKS = [
       c: 'Spread around the mean',
     },
   ],
-  // 9 — Data prep
+  
   [
     {
       q: 'One-hot encoding is typically used for:',
@@ -342,7 +330,7 @@ const QUESTION_BANKS = [
       c: 'Reduce overfitting assessment and tune models honestly',
     },
   ],
-  // 10 — HCI / UX
+  
   [
     {
       q: 'Nielsen usability heuristics emphasize:',
@@ -365,7 +353,7 @@ const QUESTION_BANKS = [
       c: 'Making content usable for people with disabilities',
     },
   ],
-  // 11 — User research
+  
   [
     {
       q: 'A semi-structured interview is:',
@@ -388,7 +376,7 @@ const QUESTION_BANKS = [
       c: 'Verbalize thoughts while using a system',
     },
   ],
-  // 12 — Security goals
+  
   [
     {
       q: 'The CIA triad includes Confidentiality, Integrity, and:',
@@ -401,7 +389,7 @@ const QUESTION_BANKS = [
       c: 'Threat modelling framework',
     },
   ],
-  // 13 — Crypto
+  
   [
     {
       q: 'AES is best described as:',
@@ -414,7 +402,7 @@ const QUESTION_BANKS = [
       c: 'Difficulty of factoring large integers',
     },
   ],
-  // 14 — Logic / discrete
+  
   [
     {
       q: 'How many rows in a truth table for 3 propositional variables?',
@@ -432,7 +420,7 @@ const QUESTION_BANKS = [
       c: 'AND/OR with negated complements',
     },
   ],
-  // 15 — Combinatorics / graphs
+  
   [
     {
       q: 'A tree with n nodes has how many edges?',
@@ -445,7 +433,7 @@ const QUESTION_BANKS = [
       c: 'n!',
     },
   ],
-  // 16 — Numerical / linear algebra (CSE maths)
+  
   [
     {
       q: 'Gaussian elimination solves primarily:',
@@ -458,7 +446,7 @@ const QUESTION_BANKS = [
       c: 'Determinant is zero',
     },
   ],
-  // 17 — Virtualization / containers
+  
   [
     {
       q: 'A hypervisor primarily:',
@@ -476,7 +464,7 @@ const QUESTION_BANKS = [
       c: 'Layers',
     },
   ],
-  // 18 — Cloud / networking
+  
   [
     {
       q: 'SaaS delivers:',
@@ -494,7 +482,7 @@ const QUESTION_BANKS = [
       c: 'Hostnames to IP addresses',
     },
   ],
-  // 19 — Digital logic / embedded
+  
   [
     {
       q: "De Morgan's theorem on NOR/NAND is used in:",

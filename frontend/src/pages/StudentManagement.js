@@ -112,7 +112,7 @@ const StudentManagement = () => {
       const studentData = {
         ...data,
         role: 'student',
-        password: 'Student123', // Default password for student accounts (meets validation: lowercase, uppercase, number)
+        password: 'Student123', 
         academicInfo: {
           section: data.section,
           year: data.year ? parseInt(data.year) : undefined,
@@ -189,7 +189,7 @@ const StudentManagement = () => {
             };
           }).filter(student => student.email);
 
-          // Process bulk import
+          
           students.forEach(studentData => {
             createStudentMutation.mutate(studentData);
           });
@@ -232,7 +232,7 @@ Jane,Smith,jane.smith@school.com,ST002,B,3,1,2024,20,19`;
       student.email?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Allow all users to access student management with appropriate permissions
+  
 
   return (
     <div className="max-w-7xl mx-auto">
@@ -249,8 +249,6 @@ Jane,Smith,jane.smith@school.com,ST002,B,3,1,2024,20,19`;
           Manage student details, attendance, and academic information.
         </p>
       </div>
-
-      {/* Actions Bar */}
       <div className="card mb-6">
         <div className="card-body">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
@@ -297,8 +295,6 @@ Jane,Smith,jane.smith@school.com,ST002,B,3,1,2024,20,19`;
           </div>
         </div>
       </div>
-
-      {/* Statistics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
         <div className="stats-card">
           <div className="stats-card-content">
@@ -361,8 +357,6 @@ Jane,Smith,jane.smith@school.com,ST002,B,3,1,2024,20,19`;
           </div>
         </div>
       </div>
-
-      {/* Students Table */}
       <div className="card">
         <div className="card-header">
           <h3 className="text-lg font-medium text-gray-900">Students List</h3>
@@ -462,8 +456,6 @@ Jane,Smith,jane.smith@school.com,ST002,B,3,1,2024,20,19`;
           )}
         </div>
       </div>
-
-      {/* Create/Edit Student Modal */}
       {showCreateForm && (
         <div className="fixed inset-0 z-50 overflow-y-auto">
           <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
@@ -481,7 +473,6 @@ Jane,Smith,jane.smith@school.com,ST002,B,3,1,2024,20,19`;
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Basic Information */}
                     <div>
                       <label className="form-label">First Name *</label>
                       <input
@@ -530,8 +521,6 @@ Jane,Smith,jane.smith@school.com,ST002,B,3,1,2024,20,19`;
                         placeholder="ST001 (leave empty for auto-generation)"
                       />
                     </div>
-
-                    {/* Academic Information */}
                     <div>
                       <label className="form-label">Section</label>
                       <input
@@ -584,9 +573,6 @@ Jane,Smith,jane.smith@school.com,ST002,B,3,1,2024,20,19`;
                         placeholder="2024"
                       />
                     </div>
-
-                    
-                    {/* Attendance */}
                     <div>
                       <label className="form-label">Total Sessions</label>
                       <input
@@ -606,8 +592,6 @@ Jane,Smith,jane.smith@school.com,ST002,B,3,1,2024,20,19`;
                         placeholder="18"
                       />
                     </div>
-
-                    {/* Courses */}
                     <div className="md:col-span-2">
                       <label className="form-label">Enrolled Courses</label>
                       <select
@@ -659,8 +643,6 @@ Jane,Smith,jane.smith@school.com,ST002,B,3,1,2024,20,19`;
           </div>
         </div>
       )}
-
-      {/* Bulk Import Modal */}
       {showBulkImport && (
         <div className="fixed inset-0 z-50 overflow-y-auto">
           <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">

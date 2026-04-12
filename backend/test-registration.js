@@ -1,4 +1,4 @@
-// Test registration endpoint
+
 const axios = require('axios');
 
 async function testRegistration() {
@@ -7,7 +7,7 @@ async function testRegistration() {
       firstName: 'Test',
       lastName: 'User',
       email: `test${Date.now()}@example.com`,
-      password: 'Test123456', // Contains uppercase, lowercase, and numbers
+      password: 'Test123456', 
       role: 'student'
     };
 

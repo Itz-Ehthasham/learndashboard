@@ -80,7 +80,6 @@ const AssessmentCreate = () => {
   const onSubmit = async (data) => {
     setIsSubmitting(true);
 
-    // Validate questions
     const validQuestions = questions.filter(q => q.question.trim() !== '');
     if (validQuestions.length === 0) {
       toast.error('Please add at least one question');
@@ -88,7 +87,7 @@ const AssessmentCreate = () => {
       return;
     }
 
-    // Format the data for API
+    
     const assessmentData = {
       ...data,
       scheduledDate: data.scheduledDate ? new Date(data.scheduledDate) : undefined,
@@ -138,7 +137,6 @@ const AssessmentCreate = () => {
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
-        {/* Basic Information */}
         <div className="card">
           <div className="card-header">
             <h3 className="text-lg font-medium text-gray-900 flex items-center">
@@ -313,8 +311,6 @@ const AssessmentCreate = () => {
             </div>
           </div>
         </div>
-
-        {/* Schedule */}
         <div className="card">
           <div className="card-header">
             <h3 className="text-lg font-medium text-gray-900 flex items-center">
@@ -348,8 +344,6 @@ const AssessmentCreate = () => {
             </div>
           </div>
         </div>
-
-        {/* Questions */}
         <div className="card">
           <div className="card-header">
             <h3 className="text-lg font-medium text-gray-900 flex items-center">
@@ -490,8 +484,6 @@ const AssessmentCreate = () => {
             )}
           </div>
         </div>
-
-        {/* Submit Button */}
         <div className="flex justify-end space-x-4">
           <button
             type="button"

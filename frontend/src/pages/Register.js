@@ -39,7 +39,7 @@ const Register = () => {
         navigate('/dashboard');
       }
     } catch (error) {
-      // AuthContext already surfaces API errors via toast
+      
     } finally {
       setIsSubmitting(false);
     }

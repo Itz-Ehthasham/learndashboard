@@ -60,7 +60,7 @@ const Layout = () => {
     },
   ];
 
-  // Admin and trainer navigation items
+  
   if (isAdmin() || isTrainer()) {
     navigation.push({
       name: 'Students',
@@ -70,7 +70,7 @@ const Layout = () => {
     });
   }
 
-  // Admin-only navigation items
+  
   if (isAdmin()) {
     navigation.push({
       name: 'Users',
@@ -116,7 +116,6 @@ const Layout = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Mobile sidebar */}
       <div className={`fixed inset-0 z-50 lg:hidden ${sidebarOpen ? '' : 'pointer-events-none'}`}>
         <div className={`fixed inset-0 bg-gray-600 transition-opacity ${sidebarOpen ? 'opacity-100' : 'opacity-0'}`} 
              onClick={() => setSidebarOpen(false)} />
@@ -192,8 +191,6 @@ const Layout = () => {
           </div>
         </div>
       </div>
-
-      {/* Desktop sidebar */}
       <div className="hidden lg:fixed lg:inset-y-0 lg:flex lg:w-64 lg:flex-col">
         <div className="flex flex-grow flex-col overflow-y-auto bg-white border-r">
           <div className="flex h-16 items-center px-4 border-b">
@@ -258,10 +255,7 @@ const Layout = () => {
           </div>
         </div>
       </div>
-
-      {/* Main content */}
       <div className="lg:pl-64">
-        {/* Top navigation */}
         <div className="sticky top-0 z-40 bg-white border-b">
           <div className="flex h-16 items-center justify-between px-4 lg:px-8">
             <button
@@ -280,7 +274,6 @@ const Layout = () => {
             </div>
             
             <div className="flex items-center space-x-4">
-              {/* Add notifications, search, etc. here */}
               <div className="lg:hidden">
                 <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getRoleBadgeColor(user?.role)}`}>
                   {user?.role}
@@ -289,8 +282,6 @@ const Layout = () => {
             </div>
           </div>
         </div>
-
-        {/* Page content */}
         <main className="p-4 lg:p-8">
           <Outlet />
         </main>

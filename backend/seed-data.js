@@ -4,7 +4,6 @@ const User = require('./src/models/User');
 const Course = require('./src/models/Course');
 const Assessment = require('./src/models/Assessment');
 
-// Connect to MongoDB
 mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/learning-analytics', {
   useNewUrlParser: true,
   useUnifiedTopology: true,
@@ -12,7 +11,7 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/learning-
 
 const sampleData = {
   users: [
-    // Admin Users
+    
     {
       firstName: 'John',
       lastName: 'Administrator',
@@ -32,7 +31,7 @@ const sampleData = {
       dateOfBirth: new Date('1985-08-22')
     },
 
-    // Trainer Users
+    
     {
       firstName: 'Michael',
       lastName: 'Wilson',
@@ -61,7 +60,7 @@ const sampleData = {
       dateOfBirth: new Date('1979-07-14')
     },
 
-    // Student Users
+    
     {
       firstName: 'Alice',
       lastName: 'Smith',
@@ -362,13 +361,13 @@ async function seedDatabase() {
   try {
     console.log('Starting database seeding...');
 
-    // Clear existing data
+    
     await User.deleteMany({});
     await Course.deleteMany({});
     await Assessment.deleteMany({});
     console.log('Cleared existing data');
 
-    // Create users
+    
     const createdUsers = [];
     for (const userData of sampleData.users) {
       const user = new User(userData);
@@ -377,13 +376,13 @@ async function seedDatabase() {
       console.log(`Created user: ${user.firstName} ${user.lastName} (${user.role})`);
     }
 
-    // Create courses
+    
     const createdCourses = [];
     const trainers = createdUsers.filter(u => u.role === 'trainer');
     
     for (let i = 0; i < sampleData.courses.length; i++) {
       const courseData = sampleData.courses[i];
-      const trainer = trainers[i % trainers.length]; // Assign trainers round-robin
+      const trainer = trainers[i % trainers.length]; 
       
       const course = new Course({
         ...courseData,
@@ -394,12 +393,12 @@ async function seedDatabase() {
       console.log(`Created course: ${course.title} (Instructor: ${trainer.firstName} ${trainer.lastName})`);
     }
 
-    // Enroll students in courses
+    
     const students = createdUsers.filter(u => u.role === 'student');
     
     for (const student of students) {
-      // Enroll each student in 2-3 random courses
-      const numCourses = Math.floor(Math.random() * 2) + 2; // 2-3 courses
+      
+      const numCourses = Math.floor(Math.random() * 2) + 2; 
       const availableCourses = createdCourses.slice();
       
       for (let i = 0; i < numCourses && availableCourses.length > 0; i++) {
@@ -415,7 +414,7 @@ async function seedDatabase() {
       await student.save();
     }
 
-    // Save courses with enrolled students
+    
     for (const course of createdCourses) {
       await course.save();
     }
@@ -447,5 +446,4 @@ async function seedDatabase() {
   }
 }
 
-// Run the seeding function
 seedDatabase();

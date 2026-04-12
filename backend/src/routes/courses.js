@@ -6,14 +6,11 @@ const { validateCourseCreation, validateCourseUpdate } = require('../middleware/
 
 const router = express.Router();
 
-// @route   GET /api/courses
-// @desc    Get all courses
-// @access  Private
 router.get('/', authenticate, async (req, res) => {
   try {
     const { page = 1, limit = 10, category, level, instructor, search, sortBy = 'createdAt', sortOrder = 'desc' } = req.query;
 
-    // Build query
+    
     let query = { isActive: true };
     
     if (category) {
@@ -36,28 +33,28 @@ router.get('/', authenticate, async (req, res) => {
       ];
     }
 
-    // Build sort object
+    
     const sort = {};
     sort[sortBy] = sortOrder === 'asc' ? 1 : -1;
 
-    // Execute query with pagination
+    
     let coursesQuery = Course.find(query)
       .populate('instructor', 'firstName lastName email')
       .sort(sort)
       .limit(limit * 1)
       .skip((page - 1) * limit);
 
-    // If student, only show enrolled courses or available courses
+    
     if (req.user.role === 'student') {
       coursesQuery = coursesQuery.or([
         { 'enrolledStudents.student': req.user._id },
-        {} // Show all available courses
+        {} 
       ]);
     }
 
     const courses = await coursesQuery;
 
-    // Get total count for pagination
+    
     const total = await Course.countDocuments(query);
 
     res.json({
@@ -80,9 +77,6 @@ router.get('/', authenticate, async (req, res) => {
   }
 });
 
-// @route   GET /api/courses/:id
-// @desc    Get course by ID
-// @access  Private
 router.get('/:id', authenticate, checkResourceAccess('course'), async (req, res) => {
   try {
     const course = await Course.findById(req.params.id)
@@ -112,9 +106,6 @@ router.get('/:id', authenticate, checkResourceAccess('course'), async (req, res)
   }
 });
 
-// @route   POST /api/courses
-// @desc    Create new course (admin/trainer only)
-// @access  Private (Admin, Trainer)
 router.post('/', authenticate, authorize('admin', 'trainer'), validateCourseCreation, async (req, res) => {
   try {
     const {
@@ -137,7 +128,7 @@ router.post('/', authenticate, authorize('admin', 'trainer'), validateCourseCrea
         ? req.user._id
         : instructor;
 
-    // Check if course code already exists
+    
     const codeNormalized = typeof code === 'string' ? code.trim().toUpperCase() : code;
     const existingCourse = await Course.findOne({ code: codeNormalized });
     if (existingCourse) {
@@ -147,7 +138,7 @@ router.post('/', authenticate, authorize('admin', 'trainer'), validateCourseCrea
       });
     }
 
-    // Verify instructor exists and is a trainer
+    
     const instructorUser = await User.findById(instructorId);
     if (!instructorUser || instructorUser.role !== 'trainer') {
       return res.status(400).json({
@@ -164,7 +155,7 @@ router.post('/', authenticate, authorize('admin', 'trainer'), validateCourseCrea
       endTime: (schedule?.endTime && String(schedule.endTime).trim()) || '17:00'
     };
 
-    // Create new course
+    
     const course = new Course({
       title,
       description,
@@ -182,7 +173,7 @@ router.post('/', authenticate, authorize('admin', 'trainer'), validateCourseCrea
 
     await course.save();
 
-    // Populate instructor details for response
+    
     await course.populate('instructor', 'firstName lastName email');
 
     res.status(201).json({
@@ -201,9 +192,6 @@ router.post('/', authenticate, authorize('admin', 'trainer'), validateCourseCrea
   }
 });
 
-// @route   PUT /api/courses/:id
-// @desc    Update course
-// @access  Private
 router.put('/:id', authenticate, checkResourceAccess('course'), validateCourseUpdate, async (req, res) => {
   try {
     const course = await Course.findById(req.params.id);
@@ -227,7 +215,7 @@ router.put('/:id', authenticate, checkResourceAccess('course'), validateCourseUp
       materials
     } = req.body;
 
-    // Update fields based on user role
+    
     if (req.user.role === 'admin' || 
         (req.user.role === 'trainer' && course.instructor.toString() === req.user._id.toString())) {
       if (title) course.title = title;
@@ -266,9 +254,6 @@ router.put('/:id', authenticate, checkResourceAccess('course'), validateCourseUp
   }
 });
 
-// @route   DELETE /api/courses/:id
-// @desc    Delete course (admin only)
-// @access  Private (Admin)
 router.delete('/:id', authenticate, authorize('admin'), async (req, res) => {
   try {
     const course = await Course.findById(req.params.id);
@@ -279,7 +264,7 @@ router.delete('/:id', authenticate, authorize('admin'), async (req, res) => {
       });
     }
 
-    // Soft delete by setting isActive to false
+    
     course.isActive = false;
     await course.save();
 
@@ -296,9 +281,6 @@ router.delete('/:id', authenticate, authorize('admin'), async (req, res) => {
   }
 });
 
-// @route   POST /api/courses/:id/enroll
-// @desc    Enroll student in course
-// @access  Private (Student)
 router.post('/:id/enroll', authenticate, authorize('student'), async (req, res) => {
   try {
     const course = await Course.findById(req.params.id);
@@ -309,7 +291,7 @@ router.post('/:id/enroll', authenticate, authorize('student'), async (req, res) 
       });
     }
 
-    // Check if course is active
+    
     if (!course.isActive) {
       return res.status(400).json({
         success: false,
@@ -317,10 +299,10 @@ router.post('/:id/enroll', authenticate, authorize('student'), async (req, res) 
       });
     }
 
-    // Enroll the student
+    
     await course.enrollStudent(req.user._id);
 
-    // Update user's enrolled courses
+    
     const user = await User.findById(req.user._id);
     user.enrolledCourses.push(course._id);
     await user.save();
@@ -341,9 +323,6 @@ router.post('/:id/enroll', authenticate, authorize('student'), async (req, res) 
   }
 });
 
-// @route   POST /api/courses/:id/unenroll
-// @desc    Unenroll student from course
-// @access  Private (Student)
 router.post('/:id/unenroll', authenticate, authorize('student'), async (req, res) => {
   try {
     const course = await Course.findById(req.params.id);
@@ -354,10 +333,10 @@ router.post('/:id/unenroll', authenticate, authorize('student'), async (req, res
       });
     }
 
-    // Unenroll the student
+    
     await course.unenrollStudent(req.user._id);
 
-    // Update user's enrolled courses
+    
     const user = await User.findById(req.user._id);
     user.enrolledCourses = user.enrolledCourses.filter(
       courseId => courseId.toString() !== course._id.toString()
@@ -377,14 +356,11 @@ router.post('/:id/unenroll', authenticate, authorize('student'), async (req, res
   }
 });
 
-// @route   GET /api/courses/stats/overview
-// @desc    Get course statistics overview (admin/trainer only)
-// @access  Private (Admin, Trainer)
 router.get('/stats/overview', authenticate, authorize('admin', 'trainer'), async (req, res) => {
   try {
     let matchQuery = { isActive: true };
     
-    // If trainer, only show their courses
+    
     if (req.user.role === 'trainer') {
       matchQuery.instructor = req.user._id;
     }
@@ -438,20 +414,17 @@ router.get('/stats/overview', authenticate, authorize('admin', 'trainer'), async
   }
 });
 
-// @route   GET /api/courses/my-courses
-// @desc    Get courses for current user (instructor or student)
-// @access  Private
 router.get('/my-courses', authenticate, async (req, res) => {
   try {
     let courses;
     
     if (req.user.role === 'trainer') {
-      // Get courses taught by this instructor
+      
       courses = await Course.find({ instructor: req.user._id, isActive: true })
         .populate('enrolledStudents.student', 'firstName lastName email')
         .sort({ createdAt: -1 });
     } else if (req.user.role === 'student') {
-      // Get courses enrolled by this student
+      
       courses = await Course.find({
         'enrolledStudents.student': req.user._id,
         'enrolledStudents.status': 'active',
@@ -460,7 +433,7 @@ router.get('/my-courses', authenticate, async (req, res) => {
         .populate('instructor', 'firstName lastName email')
         .sort({ createdAt: -1 });
     } else {
-      // Admin can see all courses
+      
       courses = await Course.find({ isActive: true })
         .populate('instructor', 'firstName lastName email')
         .sort({ createdAt: -1 });

@@ -40,7 +40,7 @@ const assessmentSchema = new mongoose.Schema({
     max: [1000, 'Passing score cannot exceed 1000']
   },
   duration: {
-    type: Number, // in minutes
+    type: Number, 
     required: [true, 'Duration is required'],
     min: [1, 'Duration must be at least 1 minute'],
     max: [480, 'Duration cannot exceed 480 minutes (8 hours)']
@@ -67,7 +67,7 @@ const assessmentSchema = new mongoose.Schema({
       enum: ['multiple-choice', 'true-false', 'short-answer', 'essay', 'fill-blank'],
       required: true
     },
-    options: [String], // for multiple-choice questions
+    options: [String], 
     correctAnswer: String,
     points: {
       type: Number,
@@ -104,7 +104,7 @@ const assessmentSchema = new mongoose.Schema({
       default: false
     },
     timeSpent: {
-      type: Number, // in minutes
+      type: Number, 
       min: 0
     },
     status: {
@@ -160,7 +160,6 @@ const assessmentSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Indexes for efficient queries
 assessmentSchema.index({ course: 1 });
 assessmentSchema.index({ instructor: 1 });
 assessmentSchema.index({ type: 1 });
@@ -169,28 +168,23 @@ assessmentSchema.index({ dueDate: 1 });
 assessmentSchema.index({ isActive: 1 });
 assessmentSchema.index({ isPublished: 1 });
 
-// Pre-save middleware to update updatedAt
 assessmentSchema.pre('save', function(next) {
   this.updatedAt = Date.now();
   next();
 });
 
-// Virtual for total questions
 assessmentSchema.virtual('totalQuestions').get(function() {
   return this.questions.length;
 });
 
-// Virtual for total points
 assessmentSchema.virtual('totalPoints').get(function() {
   return this.questions.reduce((sum, question) => sum + question.points, 0);
 });
 
-// Virtual for submission count
 assessmentSchema.virtual('submissionCount').get(function() {
   return this.submissions.filter(sub => sub.status === 'submitted').length;
 });
 
-// Virtual for average score
 assessmentSchema.virtual('averageScore').get(function() {
   const submittedSubmissions = this.submissions.filter(sub => sub.status === 'submitted' && sub.score !== undefined);
   if (submittedSubmissions.length === 0) return 0;
@@ -198,7 +192,6 @@ assessmentSchema.virtual('averageScore').get(function() {
   return totalScore / submittedSubmissions.length;
 });
 
-// Virtual for pass rate
 assessmentSchema.virtual('passRate').get(function() {
   const submittedSubmissions = this.submissions.filter(sub => sub.status === 'submitted');
   if (submittedSubmissions.length === 0) return 0;
@@ -206,35 +199,34 @@ assessmentSchema.virtual('passRate').get(function() {
   return (passedSubmissions.length / submittedSubmissions.length) * 100;
 });
 
-// Instance method to submit assessment
 assessmentSchema.methods.submitAssessment = function(studentId, answers, timeSpent) {
-  // Check if assessment is published
+  
   if (!this.isPublished) {
     throw new Error('Assessment is not published');
   }
   
-  // Check if due date has passed
+  
   if (new Date() > this.dueDate) {
     throw new Error('Assessment due date has passed');
   }
   
-  // Find existing submission
+  
   let submission = this.submissions.find(sub => sub.student.toString() === studentId.toString());
   
   if (submission) {
-    // Check if multiple attempts are allowed
+    
     if (!this.allowMultipleAttempts) {
       throw new Error('Multiple attempts are not allowed for this assessment');
     }
     
-    // Check max attempts
+    
     const attempts = this.submissions.filter(sub => sub.student.toString() === studentId.toString() && sub.status === 'submitted').length;
     if (attempts >= this.maxAttempts) {
       throw new Error('Maximum attempts exceeded');
     }
   }
   
-  // Create new submission
+  
   submission = {
     student: studentId,
     submittedAt: new Date(),
@@ -246,7 +238,7 @@ assessmentSchema.methods.submitAssessment = function(studentId, answers, timeSpe
     status: 'submitted'
   };
   
-  // Process answers
+  
   let totalScore = 0;
   answers.forEach((answer, index) => {
     if (index < this.questions.length) {
@@ -273,19 +265,17 @@ assessmentSchema.methods.submitAssessment = function(studentId, answers, timeSpe
   return this.save();
 };
 
-// Instance method to check answer
 assessmentSchema.methods.checkAnswer = function(question, answer) {
   if (question.type === 'multiple-choice' || question.type === 'true-false') {
     return question.correctAnswer.toLowerCase() === answer.toLowerCase();
   } else if (question.type === 'fill-blank') {
     return question.correctAnswer.toLowerCase().trim() === answer.toLowerCase().trim();
   } else {
-    // For short-answer and essay, manual grading is required
-    return null; // Indicates manual grading needed
+    
+    return null; 
   }
 };
 
-// Instance method to grade submission
 assessmentSchema.methods.gradeSubmission = function(studentId, score, feedback, gradedBy) {
   const submission = this.submissions.find(sub => sub.student.toString() === studentId.toString());
   
@@ -304,21 +294,18 @@ assessmentSchema.methods.gradeSubmission = function(studentId, score, feedback, 
   return this.save();
 };
 
-// Static method to find published assessments
 assessmentSchema.statics.findPublishedAssessments = function() {
   return this.find({ isPublished: true, isActive: true })
     .populate('course', 'title code')
     .populate('instructor', 'firstName lastName email');
 };
 
-// Static method to find assessments by course
 assessmentSchema.statics.findByCourse = function(courseId) {
   return this.find({ course: courseId, isActive: true })
     .populate('instructor', 'firstName lastName email')
     .populate('submissions.student', 'firstName lastName email');
 };
 
-// Static method to find upcoming assessments
 assessmentSchema.statics.findUpcomingAssessments = function() {
   const now = new Date();
   return this.find({ 
@@ -331,7 +318,6 @@ assessmentSchema.statics.findUpcomingAssessments = function() {
     .sort({ scheduledDate: 1 });
 };
 
-// To JSON transformation
 assessmentSchema.methods.toJSON = function() {
   const assessmentObject = this.toObject();
   delete assessmentObject.__v;

@@ -132,37 +132,31 @@ const courseSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Indexes for efficient queries
 courseSchema.index({ code: 1 });
 courseSchema.index({ instructor: 1 });
 courseSchema.index({ category: 1 });
 courseSchema.index({ level: 1 });
 courseSchema.index({ isActive: 1 });
 
-// Pre-save middleware to update updatedAt
 courseSchema.pre('save', function(next) {
   this.updatedAt = Date.now();
   next();
 });
 
-// Virtual for enrolled student count
 courseSchema.virtual('enrolledCount').get(function() {
   return this.enrolledStudents.filter(enrollment => enrollment.status === 'active').length;
 });
 
-// Virtual for available spots
 courseSchema.virtual('availableSpots').get(function() {
   return this.maxStudents - this.enrolledCount;
 });
 
-// Virtual for course is full
 courseSchema.virtual('isFull').get(function() {
   return this.availableSpots <= 0;
 });
 
-// Instance method to enroll a student
 courseSchema.methods.enrollStudent = function(studentId) {
-  // Check if student is already enrolled
+  
   const existingEnrollment = this.enrolledStudents.find(
     enrollment => enrollment.student.toString() === studentId.toString()
   );
@@ -171,12 +165,12 @@ courseSchema.methods.enrollStudent = function(studentId) {
     throw new Error('Student is already enrolled in this course');
   }
   
-  // Check if course is full
+  
   if (this.isFull) {
     throw new Error('Course is full');
   }
   
-  // Enroll the student
+  
   this.enrolledStudents.push({
     student: studentId,
     enrollmentDate: new Date(),
@@ -186,7 +180,6 @@ courseSchema.methods.enrollStudent = function(studentId) {
   return this.save();
 };
 
-// Instance method to unenroll a student
 courseSchema.methods.unenrollStudent = function(studentId) {
   const enrollmentIndex = this.enrolledStudents.findIndex(
     enrollment => enrollment.student.toString() === studentId.toString()
@@ -200,26 +193,22 @@ courseSchema.methods.unenrollStudent = function(studentId) {
   return this.save();
 };
 
-// Static method to find active courses
 courseSchema.statics.findActiveCourses = function() {
   return this.find({ isActive: true }).populate('instructor', 'firstName lastName email');
 };
 
-// Static method to find courses by instructor
 courseSchema.statics.findByInstructor = function(instructorId) {
   return this.find({ instructor: instructorId, isActive: true })
     .populate('instructor', 'firstName lastName email')
     .populate('enrolledStudents.student', 'firstName lastName email');
 };
 
-// Static method to find available courses
 courseSchema.statics.findAvailableCourses = function() {
   return this.find({ isActive: true })
     .populate('instructor', 'firstName lastName email')
     .then(courses => courses.filter(course => !course.isFull));
 };
 
-// To JSON transformation
 courseSchema.methods.toJSON = function() {
   const courseObject = this.toObject();
   delete courseObject.__v;

@@ -90,7 +90,6 @@ const Profile = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Profile Card */}
         <div className="lg:col-span-1">
           <div className="card">
             <div className="card-body text-center">
@@ -130,10 +129,7 @@ const Profile = () => {
             </div>
           </div>
         </div>
-
-        {/* Forms */}
         <div className="lg:col-span-2 space-y-8">
-          {/* Profile Information Form */}
           <div className="card">
             <div className="card-header">
               <h3 className="text-lg font-medium text-gray-900">Profile Information</h3>
@@ -256,8 +252,6 @@ const Profile = () => {
               </form>
             </div>
           </div>
-
-          {/* Password Change Form */}
           <div className="card">
             <div className="card-header">
               <h3 className="text-lg font-medium text-gray-900">Change Password</h3>

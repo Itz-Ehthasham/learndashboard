@@ -7,7 +7,6 @@ import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
 
-// Import pages
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
@@ -21,6 +20,7 @@ import AssessmentDetail from './pages/AssessmentDetail';
 import ScoreEntry from './pages/ScoreEntry';
 import Analytics from './pages/Analytics';
 import AnalyticsEntry from './pages/AnalyticsEntry';
+import AnalyticsDetail from './pages/AnalyticsDetail';
 import Reports from './pages/Reports';
 import ReportsGenerate from './pages/ReportsGenerate';
 import ReportView from './pages/ReportView';
@@ -29,7 +29,6 @@ import UserDetail from './pages/UserDetail';
 import StudentManagement from './pages/StudentManagement';
 import NotFound from './pages/NotFound';
 
-// Create a client
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -46,11 +45,8 @@ function App() {
         <Router>
           <div className="App">
             <Routes>
-              {/* Public routes */}
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
-              
-              {/* Protected routes */}
               <Route path="/" element={
                 <ProtectedRoute>
                   <Layout />
@@ -59,35 +55,24 @@ function App() {
                 <Route index element={<Navigate to="/dashboard" replace />} />
                 <Route path="dashboard" element={<Dashboard />} />
                 <Route path="profile" element={<Profile />} />
-                
-                {/* Course Routes */}
                 <Route path="courses" element={<ProtectedRoute><Courses /></ProtectedRoute>} />
                 <Route path="courses/create" element={<ProtectedRoute><CourseCreate /></ProtectedRoute>} />
                 <Route path="courses/:id" element={<ProtectedRoute><CourseDetail /></ProtectedRoute>} />
-
-                {/* Assessment Routes */}
                 <Route path="assessments" element={<ProtectedRoute><Assessments /></ProtectedRoute>} />
                 <Route path="assessments/create" element={<ProtectedRoute><AssessmentCreate /></ProtectedRoute>} />
                 <Route path="assessments/:id" element={<ProtectedRoute><AssessmentDetail /></ProtectedRoute>} />
                 <Route path="assessments/:id/scores" element={<ProtectedRoute><ScoreEntry /></ProtectedRoute>} />
-
-                {/* Reports Routes */}
                 <Route path="reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
                 <Route path="reports/generate" element={<ProtectedRoute><ReportsGenerate /></ProtectedRoute>} />
                 <Route path="reports/view/:id" element={<ProtectedRoute><ReportView /></ProtectedRoute>} />
-
-                {/* Analytics Routes */}
                 <Route path="analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
                 <Route path="analytics/entry" element={<ProtectedRoute><AnalyticsEntry /></ProtectedRoute>} />
-                
-                {/* Admin and trainer routes */}
+                <Route path="analytics/view/:id" element={<ProtectedRoute><AnalyticsDetail /></ProtectedRoute>} />
                 <Route path="students" element={
                   <ProtectedRoute>
                     <StudentManagement />
                   </ProtectedRoute>
                 } />
-                
-                {/* Admin only routes */}
                 <Route path="users" element={
                   <ProtectedRoute requiredRole="admin">
                     <Users />
@@ -99,12 +84,8 @@ function App() {
                   </ProtectedRoute>
                 } />
               </Route>
-              
-              {/* 404 route */}
               <Route path="*" element={<NotFound />} />
             </Routes>
-            
-            {/* Global toast notifications */}
             <Toaster
               position="top-right"
               toastOptions={{

@@ -169,8 +169,6 @@ const ScoreEntry = () => {
           Grade student submissions for "{assessment?.title}"
         </p>
       </div>
-
-      {/* Assessment Summary */}
       <div className="card mb-6">
         <div className="card-body">
           <div className="flex items-center justify-between">
@@ -199,8 +197,6 @@ const ScoreEntry = () => {
           </div>
         </div>
       </div>
-
-      {/* Search and Actions */}
       <div className="card mb-6">
         <div className="card-body">
           <div className="flex items-center justify-between">
@@ -235,8 +231,6 @@ const ScoreEntry = () => {
           </div>
         </div>
       </div>
-
-      {/* Pending Submissions */}
       {pendingSubmissions.length > 0 && (
         <div className="card mb-6">
           <div className="card-header">
@@ -260,8 +254,6 @@ const ScoreEntry = () => {
                           Submitted: {new Date(submission.submittedAt).toLocaleDateString()}
                         </span>
                       </div>
-
-                      {/* Answers Preview */}
                       <div className="mb-4">
                         <h5 className="text-sm font-medium text-gray-700 mb-2">Answers:</h5>
                         <div className="bg-gray-50 rounded p-3 space-y-2">
@@ -277,8 +269,6 @@ const ScoreEntry = () => {
                           )}
                         </div>
                       </div>
-
-                      {/* Score Entry */}
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
                           <label className="form-label">Score</label>
@@ -316,7 +306,6 @@ const ScoreEntry = () => {
                         </div>
                       </div>
 
-                      {/* Feedback */}
                       <div className="mt-4">
                         <label className="form-label">Feedback (Optional)</label>
                         <textarea
@@ -336,7 +325,6 @@ const ScoreEntry = () => {
         </div>
       )}
 
-      {/* Graded Submissions */}
       {gradedSubmissions.length > 0 && (
         <div className="card">
           <div className="card-header">
@@ -410,7 +398,6 @@ const ScoreEntry = () => {
         </div>
       )}
 
-      {/* No Submissions */}
       {submissions.length === 0 && (
         <div className="card">
           <div className="card-body text-center py-8">

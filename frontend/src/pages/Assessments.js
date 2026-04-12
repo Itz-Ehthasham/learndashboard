@@ -9,7 +9,7 @@ const Assessments = () => {
   const navigate = useNavigate();
   const { user, isTrainer, isAdmin, isStudent } = useAuth();
 
-  // Use my-assessments: admin sees all, trainers see by instructor, students see published for enrolled courses
+  
   const { data: assessmentsData, isLoading, error } = useQuery(
     ['assessments', 'my', user?._id],
     () => assessmentService.getMyAssessments(),

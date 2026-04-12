@@ -56,11 +56,11 @@ const userSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Course'
   }],
-  // Student-specific fields
+  
   studentId: {
     type: String,
     unique: true,
-    sparse: true, // Allow multiple null values for non-students
+    sparse: true, 
     trim: true,
     maxlength: [20, 'Student ID cannot exceed 20 characters']
   },
@@ -123,18 +123,16 @@ const userSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Index for efficient queries
 userSchema.index({ email: 1 });
 userSchema.index({ role: 1 });
 userSchema.index({ isActive: 1 });
 
-// Pre-save middleware to hash password
 userSchema.pre('save', async function(next) {
-  // Only hash the password if it has been modified (or is new)
+  
   if (!this.isModified('password')) return next();
   
   try {
-    // Hash password with cost of 12
+    
     const salt = await bcrypt.genSalt(12);
     this.password = await bcrypt.hash(this.password, salt);
     next();
@@ -143,33 +141,27 @@ userSchema.pre('save', async function(next) {
   }
 });
 
-// Pre-save middleware to update updatedAt
 userSchema.pre('save', function(next) {
   this.updatedAt = Date.now();
   next();
 });
 
-// Instance method to check password
 userSchema.methods.comparePassword = async function(candidatePassword) {
   return await bcrypt.compare(candidatePassword, this.password);
 };
 
-// Instance method to get user's full name
 userSchema.methods.getFullName = function() {
   return `${this.firstName} ${this.lastName}`;
 };
 
-// Static method to find active users
 userSchema.statics.findActiveUsers = function() {
   return this.find({ isActive: true });
 };
 
-// Static method to find users by role
 userSchema.statics.findByRole = function(role) {
   return this.find({ role, isActive: true });
 };
 
-// Virtual for user's age
 userSchema.virtual('age').get(function() {
   if (!this.dateOfBirth) return null;
   const today = new Date();
@@ -182,7 +174,6 @@ userSchema.virtual('age').get(function() {
   return age;
 });
 
-// To JSON transformation to remove sensitive data
 userSchema.methods.toJSON = function() {
   const userObject = this.toObject();
   delete userObject.password;

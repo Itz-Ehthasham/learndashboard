@@ -141,7 +141,6 @@ const CourseCreate = () => {
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
-        {/* Basic Information */}
         <div className="card">
           <div className="card-header">
             <h3 className="text-lg font-medium text-gray-900 flex items-center">
@@ -305,8 +304,6 @@ const CourseCreate = () => {
             </div>
           </div>
         </div>
-
-        {/* Course Details */}
         <div className="card">
           <div className="card-header">
             <h3 className="text-lg font-medium text-gray-900 flex items-center">
@@ -392,8 +389,6 @@ const CourseCreate = () => {
             </div>
           </div>
         </div>
-
-        {/* Schedule */}
         <div className="card">
           <div className="card-header">
             <h3 className="text-lg font-medium text-gray-900 flex items-center">
@@ -474,8 +469,6 @@ const CourseCreate = () => {
             </div>
           </div>
         </div>
-
-        {/* Instructor Assignment (Admin Only) */}
         {isAdmin() && (
           <div className="card">
             <div className="card-header">
@@ -513,8 +506,6 @@ const CourseCreate = () => {
             </div>
           </div>
         )}
-
-        {/* Submit Button */}
         <div className="flex justify-end space-x-4">
           <button
             type="button"

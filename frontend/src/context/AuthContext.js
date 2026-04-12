@@ -2,7 +2,6 @@ import React, { createContext, useContext, useReducer, useEffect } from 'react';
 import { authAPI, api } from '../services/api';
 import toast from 'react-hot-toast';
 
-// Initial state — if a token exists, stay in loading until loadUser finishes (avoids flash redirect to login)
 const initialState = {
   user: null,
   token: localStorage.getItem('token'),
@@ -10,7 +9,6 @@ const initialState = {
   isAuthenticated: false,
 };
 
-// Action types
 const AUTH_ACTIONS = {
   LOGIN_START: 'LOGIN_START',
   LOGIN_SUCCESS: 'LOGIN_SUCCESS',
@@ -27,7 +25,6 @@ const AUTH_ACTIONS = {
   UPDATE_PROFILE_FAILURE: 'UPDATE_PROFILE_FAILURE',
 };
 
-// Reducer function
 const authReducer = (state, action) => {
   switch (action.type) {
     case AUTH_ACTIONS.LOGIN_START:
@@ -83,14 +80,12 @@ const authReducer = (state, action) => {
   }
 };
 
-// Create context
 const AuthContext = createContext();
 
-// Auth provider component
 export const AuthProvider = ({ children }) => {
   const [state, dispatch] = useReducer(authReducer, initialState);
 
-  // Set token in headers and localStorage
+  
   const setAuthToken = (token) => {
     if (token) {
       localStorage.setItem('token', token);
@@ -104,7 +99,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Load user from token
+  
   const loadUser = async () => {
     const token = localStorage.getItem('token');
     if (!token) {
@@ -130,7 +125,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Login function
+  
   const login = async (email, password) => {
     dispatch({ type: AUTH_ACTIONS.LOGIN_START });
 
@@ -161,7 +156,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Register function
+  
   const register = async (userData) => {
     dispatch({ type: AUTH_ACTIONS.REGISTER_START });
 
@@ -203,19 +198,19 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Logout function
+  
   const logout = async () => {
     try {
       await authAPI.post('/auth/logout').catch(() => {});
     } catch (_) {
-      /* ignore */
+      
     }
     setAuthToken(null);
     dispatch({ type: AUTH_ACTIONS.LOGOUT });
     toast.success('Logged out successfully');
   };
 
-  // Update profile function
+  
   const updateProfile = async (profileData) => {
     dispatch({ type: AUTH_ACTIONS.UPDATE_PROFILE_START });
 
@@ -243,7 +238,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Change password function
+  
   const changePassword = async (currentPassword, newPassword) => {
     try {
       const response = await authAPI.post('/auth/change-password', {
@@ -265,32 +260,32 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Check if user has specific role
+  
   const hasRole = (role) => {
     return state.user?.role === role;
   };
 
-  // Check if user has any of the specified roles
+  
   const hasAnyRole = (roles) => {
     return roles.includes(state.user?.role);
   };
 
-  // Check if user can access admin features
+  
   const isAdmin = () => {
     return state.user?.role === 'admin';
   };
 
-  // Check if user can access trainer features
+  
   const isTrainer = () => {
     return state.user?.role === 'trainer';
   };
 
-  // Check if user is a student
+  
   const isStudent = () => {
     return state.user?.role === 'student';
   };
 
-  // Load user on mount; sync when another tab logs out or 401 clears storage
+  
   useEffect(() => {
     loadUser();
 
@@ -333,7 +328,6 @@ export const AuthProvider = ({ children }) => {
   );
 };
 
-// Custom hook to use auth context
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {

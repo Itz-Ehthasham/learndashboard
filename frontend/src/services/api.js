@@ -1,9 +1,15 @@
 import axios from 'axios';
 
-// Create base axios instance
-const baseURL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+function normalizeApiBase(raw) {
+  const fallback = 'http://localhost:5000/api';
+  const trimmed = (raw || fallback).trim().replace(/\/+$/, '');
+  if (!trimmed) return fallback;
+  if (trimmed.endsWith('/api')) return trimmed;
+  return `${trimmed}/api`;
+}
 
-// Auth API instance
+const baseURL = normalizeApiBase(process.env.REACT_APP_API_URL);
+
 export const authAPI = axios.create({
   baseURL,
   headers: {
@@ -11,7 +17,6 @@ export const authAPI = axios.create({
   },
 });
 
-// Main API instance
 export const api = axios.create({
   baseURL,
   headers: {
@@ -19,7 +24,6 @@ export const api = axios.create({
   },
 });
 
-// Request interceptor to add auth token
 const addAuthToken = (config) => {
   const token = localStorage.getItem('token');
   if (token) {
@@ -28,7 +32,6 @@ const addAuthToken = (config) => {
   return config;
 };
 
-// Response interceptor — 401 on protected routes clears session (not on failed login/register)
 const handleInterceptorError = (error) => {
   const status = error.response?.status;
   const reqPath = `${error.config?.baseURL || ''}${error.config?.url || ''}`;
@@ -43,7 +46,7 @@ const handleInterceptorError = (error) => {
     try {
       window.dispatchEvent(new CustomEvent('auth:unauthorized'));
     } catch (_) {
-      /* ignore */
+      
     }
     const path = window.location?.pathname || '';
     if (!path.includes('/login') && !path.includes('/register')) {
@@ -53,16 +56,14 @@ const handleInterceptorError = (error) => {
   return Promise.reject(error);
 };
 
-// Add interceptors
 authAPI.interceptors.request.use(addAuthToken);
 authAPI.interceptors.response.use((response) => response, handleInterceptorError);
 
 api.interceptors.request.use(addAuthToken);
 api.interceptors.response.use((response) => response, handleInterceptorError);
 
-// API endpoints
 export const endpoints = {
-  // Auth endpoints
+  
   AUTH: {
     LOGIN: '/auth/login',
     REGISTER: '/auth/register',
@@ -72,7 +73,7 @@ export const endpoints = {
     VERIFY_TOKEN: '/auth/verify-token',
   },
   
-  // User endpoints
+  
   USERS: {
     LIST: '/users',
     DETAIL: (id) => `/users/${id}`,
@@ -84,7 +85,7 @@ export const endpoints = {
     SEARCH: '/users/search',
   },
   
-  // Course endpoints
+  
   COURSES: {
     LIST: '/courses',
     DETAIL: (id) => `/courses/${id}`,
@@ -97,7 +98,7 @@ export const endpoints = {
     STATS: '/courses/stats/overview',
   },
   
-  // Assessment endpoints
+  
   ASSESSMENTS: {
     LIST: '/assessments',
     DETAIL: (id) => `/assessments/${id}`,
@@ -110,9 +111,11 @@ export const endpoints = {
     UPCOMING: '/assessments/upcoming',
   },
   
-  // Analytics endpoints
+  
   ANALYTICS: {
     DASHBOARD: '/analytics/dashboard',
+    RECORDS: '/analytics/records',
+    RECORD: (id) => `/analytics/record/${id}`,
     USER: (userId) => `/analytics/user/${userId}`,
     COURSE: (courseId) => `/analytics/course/${courseId}`,
     GENERATE_PERFORMANCE: '/analytics/generate/performance',
@@ -125,7 +128,6 @@ export const endpoints = {
   },
 };
 
-// API service functions
 export const authService = {
   login: (credentials) => authAPI.post(endpoints.AUTH.LOGIN, credentials),
   register: (userData) => authAPI.post(endpoints.AUTH.REGISTER, userData),
@@ -174,6 +176,8 @@ export const assessmentService = {
 
 export const analyticsService = {
   getDashboardAnalytics: () => api.get(endpoints.ANALYTICS.DASHBOARD),
+  getAnalyticsRecords: (params) => api.get(endpoints.ANALYTICS.RECORDS, { params }),
+  getAnalyticsRecord: (id) => api.get(endpoints.ANALYTICS.RECORD(id)),
   getUserAnalytics: (userId, params) => api.get(endpoints.ANALYTICS.USER(userId), { params }),
   getCourseAnalytics: (courseId, params) => api.get(endpoints.ANALYTICS.COURSE(courseId), { params }),
   generatePerformanceAnalytics: (data) => api.post(endpoints.ANALYTICS.GENERATE_PERFORMANCE, data),
@@ -185,15 +189,13 @@ export const analyticsService = {
   getCourseSummary: (courseId) => api.get(endpoints.ANALYTICS.SUMMARY(courseId)),
 };
 
-// Utility function to handle API responses
 export const handleAPIResponse = (response) => {
   return response.data;
 };
 
-// Utility function to handle API errors
 export const handleAPIError = (error) => {
   if (error.response) {
-    // Server responded with error status
+    
     return {
       success: false,
       message: error.response.data.message || 'Server error',
@@ -201,14 +203,14 @@ export const handleAPIError = (error) => {
       status: error.response.status,
     };
   } else if (error.request) {
-    // Request was made but no response received
+    
     return {
       success: false,
       message: 'Network error. Please check your connection.',
       status: 0,
     };
   } else {
-    // Something else happened
+    
     return {
       success: false,
       message: error.message || 'An unexpected error occurred',

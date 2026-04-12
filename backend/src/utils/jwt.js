@@ -1,6 +1,5 @@
 const jwt = require('jsonwebtoken');
 
-// Generate JWT token
 const generateToken = (userId, role) => {
   return jwt.sign(
     { 
@@ -14,12 +13,10 @@ const generateToken = (userId, role) => {
   );
 };
 
-// Verify JWT token
 const verifyToken = (token) => {
   return jwt.verify(token, process.env.JWT_SECRET);
 };
 
-// Generate refresh token (for future implementation)
 const generateRefreshToken = (userId) => {
   return jwt.sign(
     { 
@@ -33,7 +30,6 @@ const generateRefreshToken = (userId) => {
   );
 };
 
-// Extract token from authorization header
 const extractTokenFromHeader = (authHeader) => {
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return null;
@@ -41,7 +37,6 @@ const extractTokenFromHeader = (authHeader) => {
   return authHeader.substring(7);
 };
 
-// Decode token without verification (for getting basic info)
 const decodeToken = (token) => {
   try {
     return jwt.decode(token);
@@ -50,7 +45,6 @@ const decodeToken = (token) => {
   }
 };
 
-// Check if token is expired
 const isTokenExpired = (token) => {
   try {
     const decoded = jwt.decode(token);

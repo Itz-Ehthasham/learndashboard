@@ -18,7 +18,6 @@ const Login = () => {
     register,
     handleSubmit,
     formState: { errors },
-    reset,
   } = useForm();
 
   const onSubmit = async (data) => {
@@ -153,17 +152,6 @@ const Login = () => {
                 'Sign in'
               )}
             </button>
-          </div>
-
-          <div className="text-center">
-            <p className="text-sm text-gray-600">
-              Demo credentials:
-            </p>
-            <div className="mt-2 text-xs text-gray-500 space-y-1">
-              <p>Admin: admin@demo.com / admin123</p>
-              <p>Trainer: trainer@demo.com / trainer123</p>
-              <p>Student: student@demo.com / student123</p>
-            </div>
           </div>
         </form>
       </div>

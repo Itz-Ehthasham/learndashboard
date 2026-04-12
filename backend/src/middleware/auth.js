@@ -1,10 +1,9 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
-// Middleware to authenticate user using JWT
 const authenticate = async (req, res, next) => {
   try {
-    // Get token from header
+    
     const authHeader = req.header('Authorization');
     
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -14,12 +13,12 @@ const authenticate = async (req, res, next) => {
       });
     }
     
-    const token = authHeader.substring(7); // Remove 'Bearer ' prefix
+    const token = authHeader.substring(7); 
     
-    // Verify token
+    
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     
-    // Find user by id
+    
     const user = await User.findById(decoded.id).select('-password');
     
     if (!user) {
@@ -36,7 +35,7 @@ const authenticate = async (req, res, next) => {
       });
     }
     
-    // Add user to request object
+    
     req.user = user;
     next();
   } catch (error) {
@@ -61,7 +60,6 @@ const authenticate = async (req, res, next) => {
   }
 };
 
-// Middleware to authorize based on user role
 const authorize = (...roles) => {
   return (req, res, next) => {
     if (!req.user) {
@@ -82,7 +80,6 @@ const authorize = (...roles) => {
   };
 };
 
-// Middleware to check if user can access specific resource
 const checkResourceAccess = (resourceType) => {
   return async (req, res, next) => {
     try {
@@ -91,7 +88,7 @@ const checkResourceAccess = (resourceType) => {
       
       switch (resourceType) {
         case 'user':
-          // Users can only access their own profile unless they're admin
+          
           if (user.role !== 'admin' && user._id.toString() !== resourceId) {
             return res.status(403).json({
               success: false,
@@ -111,17 +108,17 @@ const checkResourceAccess = (resourceType) => {
             });
           }
           
-          // Admin can access all courses
+          
           if (user.role === 'admin') {
             return next();
           }
           
-          // Instructor can access their own courses
+          
           if (user.role === 'trainer' && course.instructor.toString() === user._id.toString()) {
             return next();
           }
           
-          // Students can only access courses they're enrolled in
+          
           if (user.role === 'student') {
             const isEnrolled = course.enrolledStudents.some(
               enrollment => enrollment.student.toString() === user._id.toString() && 
@@ -153,17 +150,17 @@ const checkResourceAccess = (resourceType) => {
             });
           }
           
-          // Admin can access all assessments
+          
           if (user.role === 'admin') {
             return next();
           }
           
-          // Instructor can access assessments for their courses
+          
           if (user.role === 'trainer' && assessment.course.instructor.toString() === user._id.toString()) {
             return next();
           }
           
-          // Students can only access assessments for courses they're enrolled in
+          
           if (user.role === 'student') {
             const isEnrolled = assessment.course.enrolledStudents.some(
               enrollment => enrollment.student.toString() === user._id.toString() && 
@@ -185,8 +182,8 @@ const checkResourceAccess = (resourceType) => {
           break;
           
         case 'analytics':
-          // Analytics access depends on user role and context
-          // This will be handled in the specific analytics routes
+          
+          
           break;
           
         default:
@@ -206,7 +203,6 @@ const checkResourceAccess = (resourceType) => {
   };
 };
 
-// Middleware to optionally authenticate (doesn't fail if no token)
 const optionalAuth = async (req, res, next) => {
   try {
     const authHeader = req.header('Authorization');
@@ -225,7 +221,7 @@ const optionalAuth = async (req, res, next) => {
     
     next();
   } catch (error) {
-    // Silently ignore authentication errors for optional auth
+    
     next();
   }
 };

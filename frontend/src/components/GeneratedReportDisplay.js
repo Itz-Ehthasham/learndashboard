@@ -43,9 +43,6 @@ function exportToJSON(data, filename) {
   window.URL.revokeObjectURL(url);
 }
 
-/**
- * @param {{ reportData: object, filePrefix?: string }} props
- */
 export default function GeneratedReportDisplay({ reportData, filePrefix = 'report' }) {
   if (!reportData) return null;
 

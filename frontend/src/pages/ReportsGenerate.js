@@ -205,7 +205,6 @@ const ReportsGenerate = () => {
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
-        {/* Report Configuration */}
         <div className="card">
           <div className="card-header">
             <h3 className="text-lg font-medium text-gray-900 flex items-center">
@@ -305,8 +304,6 @@ const ReportsGenerate = () => {
             </div>
           </div>
         </div>
-
-        {/* Filters */}
         <div className="card">
           <div className="card-header">
             <h3 className="text-lg font-medium text-gray-900 flex items-center">
@@ -315,7 +312,6 @@ const ReportsGenerate = () => {
             </h3>
           </div>
           <div className="card-body space-y-6">
-            {/* Course Filter */}
             {(isAdmin() || isTrainer()) && (
               <div>
                 <label htmlFor="course" className="form-label">
@@ -338,8 +334,6 @@ const ReportsGenerate = () => {
                 )}
               </div>
             )}
-
-            {/* User Filter */}
             {isAdmin() && (
               <div>
                 <label htmlFor="user" className="form-label">
@@ -362,8 +356,6 @@ const ReportsGenerate = () => {
                 )}
               </div>
             )}
-
-            {/* Role Filter (Admin Only) */}
             {isAdmin() && (
               <div>
                 <label htmlFor="role" className="form-label">
@@ -382,8 +374,6 @@ const ReportsGenerate = () => {
             )}
           </div>
         </div>
-
-        {/* Generate Button */}
         <div className="flex justify-end">
           <button
             type="submit"

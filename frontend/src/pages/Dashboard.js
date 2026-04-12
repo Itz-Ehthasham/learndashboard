@@ -26,7 +26,7 @@ const Dashboard = () => {
     'dashboardAnalytics',
     analyticsService.getDashboardAnalytics,
     {
-      refetchInterval: 30000, // Refresh every 30 seconds
+      refetchInterval: 30000, 
     }
   );
 
@@ -51,7 +51,7 @@ const Dashboard = () => {
 
   const analytics = dashboardData?.data?.data?.analytics ?? dashboardData?.data?.analytics ?? {};
 
-  // Sample data for charts (replace with real data)
+  
   const performanceData = [
     { name: 'Week 1', score: 75, attendance: 90 },
     { name: 'Week 2', score: 82, attendance: 85 },
@@ -70,7 +70,6 @@ const Dashboard = () => {
 
   const renderStudentDashboard = () => (
     <div className="space-y-6">
-      {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <div className="stats-card">
           <div className="stats-card-content">
@@ -147,8 +146,6 @@ const Dashboard = () => {
           </div>
         </div>
       </div>
-
-      {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="chart-container">
           <h3 className="chart-title">Performance Trends</h3>
@@ -190,8 +187,6 @@ const Dashboard = () => {
           </ResponsiveContainer>
         </div>
       </div>
-
-      {/* Recent Activity */}
       <div className="card">
         <div className="card-header">
           <h3 className="text-lg font-medium text-gray-900">Recent Activity</h3>
@@ -227,7 +222,6 @@ const Dashboard = () => {
 
   const renderTrainerDashboard = () => (
     <div className="space-y-6">
-      {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <div className="stats-card">
           <div className="stats-card-content">
@@ -304,8 +298,6 @@ const Dashboard = () => {
           </div>
         </div>
       </div>
-
-      {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="chart-container">
           <h3 className="chart-title">Class Performance Overview</h3>
@@ -352,7 +344,6 @@ const Dashboard = () => {
 
   const renderAdminDashboard = () => (
     <div className="space-y-6">
-      {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <div className="stats-card">
           <div className="stats-card-content">
@@ -426,8 +417,6 @@ const Dashboard = () => {
           </div>
         </div>
       </div>
-
-      {/* User Distribution */}
       {analytics.usersByRole && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="card">

@@ -1,14 +1,13 @@
 const mongoose = require('mongoose');
 const User = require('./src/models/User');
 
-// Connect to MongoDB
 mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/learning-analytics', {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 });
 
 const userData = [
-  // Admin Users
+  
   {
     firstName: 'John',
     lastName: 'Administrator',
@@ -28,7 +27,7 @@ const userData = [
     dateOfBirth: new Date('1985-08-22')
   },
 
-  // Trainer Users
+  
   {
     firstName: 'Michael',
     lastName: 'Wilson',
@@ -57,7 +56,7 @@ const userData = [
     dateOfBirth: new Date('1979-07-14')
   },
 
-  // Student Users
+  
   {
     firstName: 'Alice',
     lastName: 'Smith',
@@ -264,11 +263,11 @@ async function seedUsers() {
   try {
     console.log('Starting user data seeding...');
 
-    // Clear existing users
+    
     await User.deleteMany({});
     console.log('Cleared existing users');
 
-    // Create users
+    
     const createdUsers = [];
     for (const userInfo of userData) {
       const user = new User(userInfo);
@@ -303,5 +302,4 @@ async function seedUsers() {
   }
 }
 
-// Run the seeding function
 seedUsers();

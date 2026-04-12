@@ -17,7 +17,7 @@ const analyticsSchema = new mongoose.Schema({
     required: true
   },
   data: {
-    // Performance data
+    
     averageScore: {
       type: Number,
       min: 0,
@@ -37,7 +37,7 @@ const analyticsSchema = new mongoose.Schema({
       max: 100
     },
     
-    // Attendance data
+    
     totalSessions: {
       type: Number,
       min: 0
@@ -52,13 +52,13 @@ const analyticsSchema = new mongoose.Schema({
       max: 100
     },
     
-    // Engagement data
+    
     loginFrequency: {
       type: Number,
       min: 0
     },
     timeSpent: {
-      type: Number, // in minutes
+      type: Number, 
       min: 0
     },
     resourceAccessCount: {
@@ -70,7 +70,7 @@ const analyticsSchema = new mongoose.Schema({
       min: 0
     },
     
-    // Progress data
+    
     completedModules: {
       type: Number,
       min: 0
@@ -85,7 +85,7 @@ const analyticsSchema = new mongoose.Schema({
       max: 100
     },
     
-    // Additional metrics
+    
     lastActivity: {
       type: Date
     },
@@ -151,19 +151,16 @@ const analyticsSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Indexes for efficient queries
 analyticsSchema.index({ user: 1, course: 1 });
 analyticsSchema.index({ type: 1 });
 analyticsSchema.index({ period: 1 });
 analyticsSchema.index({ generatedAt: 1 });
 
-// Pre-save middleware to update updatedAt
 analyticsSchema.pre('save', function(next) {
   this.updatedAt = Date.now();
   next();
 });
 
-// Static method to get user analytics for a course
 analyticsSchema.statics.getUserAnalytics = function(userId, courseId, type = 'performance') {
   return this.findOne({
     user: userId,
@@ -173,7 +170,6 @@ analyticsSchema.statics.getUserAnalytics = function(userId, courseId, type = 'pe
     .populate('course', 'title code');
 };
 
-// Static method to get course analytics
 analyticsSchema.statics.getCourseAnalytics = function(courseId, type = 'performance') {
   return this.find({
     course: courseId,
@@ -182,13 +178,12 @@ analyticsSchema.statics.getCourseAnalytics = function(courseId, type = 'performa
     .sort({ 'data.averageScore': -1 });
 };
 
-// Static method to generate performance analytics
 analyticsSchema.statics.generatePerformanceAnalytics = async function(userId, courseId, period) {
   const User = mongoose.model('User');
   const Course = mongoose.model('Course');
   const Assessment = mongoose.model('Assessment');
   
-  // Get user and course
+  
   const user = await User.findById(userId);
   const course = await Course.findById(courseId);
   
@@ -196,14 +191,14 @@ analyticsSchema.statics.generatePerformanceAnalytics = async function(userId, co
     throw new Error('User or course not found');
   }
   
-  // Get assessments for the course
+  
   const assessments = await Assessment.find({
     course: courseId,
     'submissions.student': userId,
     'submissions.status': 'submitted'
   });
   
-  // Calculate performance metrics
+  
   let totalScore = 0;
   let completedAssessments = 0;
   let passedAssessments = 0;
@@ -222,7 +217,7 @@ analyticsSchema.statics.generatePerformanceAnalytics = async function(userId, co
   const averageScore = completedAssessments > 0 ? totalScore / completedAssessments : 0;
   const passRate = completedAssessments > 0 ? (passedAssessments / completedAssessments) * 100 : 0;
   
-  // Get class average for comparison
+  
   const allCourseAnalytics = await this.find({
     course: courseId,
     type: 'performance'
@@ -232,12 +227,12 @@ analyticsSchema.statics.generatePerformanceAnalytics = async function(userId, co
     ? allCourseAnalytics.reduce((sum, analytics) => sum + (analytics.data.averageScore || 0), 0) / allCourseAnalytics.length
     : 0;
   
-  // Calculate percentile and rank
+  
   const sortedScores = allCourseAnalytics.map(a => a.data.averageScore || 0).sort((a, b) => b - a);
   const rank = sortedScores.indexOf(averageScore) + 1;
   const percentile = sortedScores.length > 0 ? ((sortedScores.length - rank) / sortedScores.length) * 100 : 0;
   
-  // Create or update analytics
+  
   const analytics = await this.findOneAndUpdate(
     {
       user: userId,
@@ -268,10 +263,9 @@ analyticsSchema.statics.generatePerformanceAnalytics = async function(userId, co
   return analytics;
 };
 
-// Static method to generate attendance analytics
 analyticsSchema.statics.generateAttendanceAnalytics = async function(userId, courseId, period) {
-  // This would typically integrate with an attendance system
-  // For now, we'll generate sample data
+  
+  
   
   const attendanceData = {
     totalSessions: 30,
@@ -298,14 +292,13 @@ analyticsSchema.statics.generateAttendanceAnalytics = async function(userId, cou
   return analytics;
 };
 
-// Static method to generate engagement analytics
 analyticsSchema.statics.generateEngagementAnalytics = async function(userId, courseId, period) {
-  // This would typically track user interactions
-  // For now, we'll generate sample data
+  
+  
   
   const engagementData = {
-    loginFrequency: 15, // times per week
-    timeSpent: 180, // minutes per week
+    loginFrequency: 15, 
+    timeSpent: 180, 
     resourceAccessCount: 45,
     forumParticipation: 8,
     lastActivity: new Date(),
@@ -330,10 +323,9 @@ analyticsSchema.statics.generateEngagementAnalytics = async function(userId, cou
   return analytics;
 };
 
-// Static method to generate progress analytics
 analyticsSchema.statics.generateProgressAnalytics = async function(userId, courseId, period) {
-  // This would typically track module completion
-  // For now, we'll generate sample data
+  
+  
   
   const progressData = {
     completedModules: 8,
@@ -361,7 +353,6 @@ analyticsSchema.statics.generateProgressAnalytics = async function(userId, cours
   return analytics;
 };
 
-// Static method to get dashboard analytics
 analyticsSchema.statics.getDashboardAnalytics = async function(userId, userRole) {
   const User = mongoose.model('User');
   const Course = mongoose.model('Course');
@@ -370,7 +361,7 @@ analyticsSchema.statics.getDashboardAnalytics = async function(userId, userRole)
   let analytics = {};
   
   if (userRole === 'student') {
-    // Student dashboard analytics
+    
     const enrolledCourses = await Course.find({
       'enrolledStudents.student': userId,
       isActive: true
@@ -378,14 +369,14 @@ analyticsSchema.statics.getDashboardAnalytics = async function(userId, userRole)
     
     const courseIds = enrolledCourses.map(course => course._id);
     
-    // Get performance analytics for all courses
+    
     const performanceAnalytics = await this.find({
       user: userId,
       course: { $in: courseIds },
       type: 'performance'
     });
     
-    // Calculate overall metrics
+    
     const overallAverage = performanceAnalytics.length > 0
       ? performanceAnalytics.reduce((sum, a) => sum + (a.data?.averageScore ?? 0), 0) / performanceAnalytics.length
       : 0;
@@ -400,7 +391,7 @@ analyticsSchema.statics.getDashboardAnalytics = async function(userId, userRole)
     };
     
   } else if (userRole === 'trainer') {
-    // Trainer dashboard analytics
+    
     const instructorCourses = await Course.find({
       instructor: userId,
       isActive: true
@@ -408,7 +399,7 @@ analyticsSchema.statics.getDashboardAnalytics = async function(userId, userRole)
     
     const courseIds = instructorCourses.map(course => course._id);
     
-    // Get all students in instructor's courses
+    
     const allStudents = await Course.aggregate([
       { $match: { instructor: userId, isActive: true } },
       { $unwind: '$enrolledStudents' },
@@ -416,7 +407,7 @@ analyticsSchema.statics.getDashboardAnalytics = async function(userId, userRole)
       { $group: { _id: null, totalStudents: { $sum: 1 } } }
     ]);
     
-    // Get course analytics
+    
     const courseAnalytics = await this.find({
       course: { $in: courseIds },
       type: 'performance'
@@ -435,7 +426,7 @@ analyticsSchema.statics.getDashboardAnalytics = async function(userId, userRole)
     };
     
   } else if (userRole === 'admin') {
-    // Admin dashboard analytics
+    
     const totalUsers = await User.countDocuments({ isActive: true });
     const totalCourses = await Course.countDocuments({ isActive: true });
     const totalAssessments = await Assessment.countDocuments({ isActive: true });
@@ -460,13 +451,11 @@ analyticsSchema.statics.getDashboardAnalytics = async function(userId, userRole)
   return analytics;
 };
 
-// Instance method to add trend data
 analyticsSchema.methods.addTrend = function(date, value, metric) {
   this.trends.push({ date, value, metric });
   return this.save();
 };
 
-// To JSON transformation
 analyticsSchema.methods.toJSON = function() {
   const analyticsObject = this.toObject();
   delete analyticsObject.__v;

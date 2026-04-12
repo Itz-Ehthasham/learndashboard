@@ -2,7 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Custom CSS for better UX */
 @layer base {
   html {
     font-family: 'Inter', system-ui, sans-serif;
@@ -14,7 +13,6 @@
 }
 
 @layer components {
-  /* Button components */
   .btn {
     @apply inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors duration-200;
   }
@@ -39,7 +37,6 @@
     @apply border-gray-300 text-gray-700 bg-white hover:bg-gray-50 focus:ring-blue-500;
   }
   
-  /* Card components */
   .card {
     @apply bg-white overflow-hidden shadow rounded-lg;
   }
@@ -56,7 +53,6 @@
     @apply px-4 py-4 sm:px-6 bg-gray-50 border-t border-gray-200;
   }
   
-  /* Form components */
   .form-input {
     @apply block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm;
   }
@@ -69,7 +65,6 @@
     @apply mt-1 text-sm text-red-600;
   }
   
-  /* Table components */
   .table {
     @apply min-w-full divide-y divide-gray-200;
   }
@@ -94,7 +89,6 @@
     @apply px-6 py-4 whitespace-nowrap text-sm text-gray-900;
   }
   
-  /* Badge components */
   .badge {
     @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
   }
@@ -119,12 +113,10 @@
     @apply bg-gray-100 text-gray-800;
   }
   
-  /* Loading spinner */
   .spinner {
     @apply animate-spin rounded-full border-2 border-gray-300 border-t-blue-600;
   }
   
-  /* Sidebar navigation */
   .sidebar-link {
     @apply flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200;
   }
@@ -137,7 +129,6 @@
     @apply text-gray-600 hover:bg-gray-50 hover:text-gray-900;
   }
   
-  /* Stats cards */
   .stats-card {
     @apply bg-white overflow-hidden shadow rounded-lg;
   }
@@ -154,7 +145,6 @@
     @apply mt-2 text-3xl font-semibold text-gray-900;
   }
   
-  /* Chart container */
   .chart-container {
     @apply bg-white p-6 rounded-lg shadow;
   }
@@ -164,7 +154,6 @@
   }
 }
 
-/* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -183,7 +172,6 @@
   background: #555;
 }
 
-/* Animation classes */
 .fade-in {
   animation: fadeIn 0.3s ease-in;
 }
@@ -208,7 +196,6 @@
   }
 }
 
-/* Responsive utilities */
 @media (max-width: 640px) {
   .mobile-hidden {
     display: none;
@@ -221,7 +208,6 @@
   }
 }
 
-/* Print styles */
 @media print {
   .no-print {
     display: none !important;

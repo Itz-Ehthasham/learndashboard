@@ -2,7 +2,6 @@ const mongoose = require('mongoose');
 const User = require('./src/models/User');
 const Course = require('./src/models/Course');
 
-// Connect to MongoDB
 mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/learning-analytics', {
   useNewUrlParser: true,
   useUnifiedTopology: true,
@@ -95,22 +94,22 @@ async function seedCourses() {
   try {
     console.log('Starting course seeding...');
 
-    // Clear existing courses
+    
     await Course.deleteMany({});
     console.log('Cleared existing courses');
 
-    // Get trainers
+    
     const trainers = await User.find({ role: 'trainer' });
     if (trainers.length === 0) {
       console.log('No trainers found. Please run the main seed script first.');
       return;
     }
 
-    // Create courses
+    
     const createdCourses = [];
     for (let i = 0; i < courseData.length; i++) {
       const courseInfo = courseData[i];
-      const trainer = trainers[i % trainers.length]; // Assign trainers round-robin
+      const trainer = trainers[i % trainers.length]; 
       
       const course = new Course({
         ...courseInfo,
@@ -121,12 +120,12 @@ async function seedCourses() {
       console.log(`Created course: ${course.title} (Instructor: ${trainer.firstName} ${trainer.lastName})`);
     }
 
-    // Enroll students in courses
+    
     const students = await User.find({ role: 'student' });
     
     for (const student of students) {
-      // Enroll each student in 2-3 random courses
-      const numCourses = Math.floor(Math.random() * 2) + 2; // 2-3 courses
+      
+      const numCourses = Math.floor(Math.random() * 2) + 2; 
       const availableCourses = createdCourses.slice();
       
       for (let i = 0; i < numCourses && availableCourses.length > 0; i++) {
@@ -142,7 +141,7 @@ async function seedCourses() {
       await student.save();
     }
 
-    // Save courses with enrolled students
+    
     for (const course of createdCourses) {
       await course.save();
     }
@@ -158,5 +157,4 @@ async function seedCourses() {
   }
 }
 
-// Run the seeding function
 seedCourses();

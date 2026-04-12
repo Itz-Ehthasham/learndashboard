@@ -1,6 +1,5 @@
 const { body, validationResult } = require('express-validator');
 
-// Validation middleware
 const validate = (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
@@ -13,7 +12,6 @@ const validate = (req, res, next) => {
   next();
 };
 
-// User validation rules
 const validateUserRegistration = [
   body('firstName')
     .trim()
@@ -118,7 +116,6 @@ const validateUserUpdate = [
   validate
 ];
 
-// Course validation rules
 const validateCourseCreation = [
   body('title')
     .trim()
@@ -248,7 +245,6 @@ const validateCourseUpdate = [
   validate
 ];
 
-// Assessment validation rules
 const validateAssessmentCreation = [
   body('title')
     .trim()
@@ -340,7 +336,6 @@ const validateAssessmentUpdate = [
   validate
 ];
 
-// Analytics validation rules
 const validateAnalyticsQuery = [
   body('userId')
     .optional()
@@ -370,7 +365,6 @@ const validateAnalyticsQuery = [
   validate
 ];
 
-// Password change validation
 const validatePasswordChange = [
   body('currentPassword')
     .notEmpty()
@@ -393,7 +387,6 @@ const validatePasswordChange = [
   validate
 ];
 
-// Email validation for password reset
 const validateEmailRequest = [
   body('email')
     .isEmail()
@@ -403,7 +396,6 @@ const validateEmailRequest = [
   validate
 ];
 
-// Password reset validation
 const validatePasswordReset = [
   body('token')
     .notEmpty()

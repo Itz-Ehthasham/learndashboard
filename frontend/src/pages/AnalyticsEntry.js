@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
-import { useQuery, useMutation } from 'react-query';
+import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { analyticsService, courseService, userService } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
@@ -18,6 +18,7 @@ import {
 
 const AnalyticsEntry = () => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { user, isTrainer, isAdmin } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [analyticsData, setAnalyticsData] = useState({
@@ -62,14 +63,26 @@ const AnalyticsEntry = () => {
   const {
     data: usersData,
     isLoading: usersLoading
-  } = useQuery('users', userService.getUsers, {
-    enabled: isAdmin()
-  });
+  } = useQuery(
+    ['users', 'analytics-admin'],
+    () => userService.getUsers({ limit: 500 }),
+    { enabled: isAdmin() }
+  );
+
+  const {
+    data: studentsData,
+    isLoading: studentsLoading
+  } = useQuery(
+    ['users', 'students', 'analytics'],
+    () => userService.getUsers({ role: 'student', limit: 500 }),
+    { enabled: isTrainer() && !isAdmin() }
+  );
 
   const generatePerformanceAnalyticsMutation = useMutation(
     analyticsService.generatePerformanceAnalytics,
     {
       onSuccess: (response) => {
+        queryClient.invalidateQueries(['analytics-records']);
         toast.success('Performance analytics generated successfully!');
         navigate('/analytics');
       },
@@ -86,6 +99,7 @@ const AnalyticsEntry = () => {
     analyticsService.generateAttendanceAnalytics,
     {
       onSuccess: (response) => {
+        queryClient.invalidateQueries(['analytics-records']);
         toast.success('Attendance analytics generated successfully!');
         navigate('/analytics');
       },
@@ -102,6 +116,7 @@ const AnalyticsEntry = () => {
     analyticsService.generateEngagementAnalytics,
     {
       onSuccess: (response) => {
+        queryClient.invalidateQueries(['analytics-records']);
         toast.success('Engagement analytics generated successfully!');
         navigate('/analytics');
       },
@@ -118,6 +133,7 @@ const AnalyticsEntry = () => {
     analyticsService.generateProgressAnalytics,
     {
       onSuccess: (response) => {
+        queryClient.invalidateQueries(['analytics-records']);
         toast.success('Progress analytics generated successfully!');
         navigate('/analytics');
       },
@@ -140,28 +156,54 @@ const AnalyticsEntry = () => {
     }));
   };
 
+  
+  const buildGenerateBody = (data) => {
+    const end = data.endDate ? new Date(data.endDate) : new Date();
+    end.setHours(23, 59, 59, 999);
+    let start;
+    if (data.startDate) {
+      start = new Date(data.startDate);
+      start.setHours(0, 0, 0, 0);
+    } else {
+      start = new Date(end);
+      start.setDate(start.getDate() - 30);
+      start.setHours(0, 0, 0, 0);
+    }
+
+    return {
+      userId: data.user,
+      courseId: data.course,
+      period: { start, end },
+      data: analyticsData[data.analyticsType] || {},
+    };
+  };
+
   const onSubmit = async (data) => {
+    if (!data.course) {
+      toast.error('Please select a course.');
+      return;
+    }
+    if (!data.user) {
+      toast.error('Please select a user (student).');
+      return;
+    }
+
     setIsSubmitting(true);
 
-    const analyticsPayload = {
-      ...data,
-      startDate: data.startDate ? new Date(data.startDate) : undefined,
-      endDate: data.endDate ? new Date(data.endDate) : undefined,
-      data: analyticsData
-    };
+    const apiBody = buildGenerateBody(data);
 
     switch (data.analyticsType) {
       case 'performance':
-        generatePerformanceAnalyticsMutation.mutate(analyticsPayload);
+        generatePerformanceAnalyticsMutation.mutate(apiBody);
         break;
       case 'attendance':
-        generateAttendanceAnalyticsMutation.mutate(analyticsPayload);
+        generateAttendanceAnalyticsMutation.mutate(apiBody);
         break;
       case 'engagement':
-        generateEngagementAnalyticsMutation.mutate(analyticsPayload);
+        generateEngagementAnalyticsMutation.mutate(apiBody);
         break;
       case 'progress':
-        generateProgressAnalyticsMutation.mutate(analyticsPayload);
+        generateProgressAnalyticsMutation.mutate(apiBody);
         break;
       default:
         toast.error('Please select an analytics type');
@@ -225,7 +267,6 @@ const AnalyticsEntry = () => {
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
-        {/* Analytics Type Selection */}
         <div className="card">
           <div className="card-header">
             <h3 className="text-lg font-medium text-gray-900">Analytics Type</h3>
@@ -265,29 +306,29 @@ const AnalyticsEntry = () => {
             )}
           </div>
         </div>
-
-        {/* Basic Information */}
         <div className="card">
           <div className="card-header">
             <h3 className="text-lg font-medium text-gray-900 flex items-center">
               <CalendarIcon className="h-5 w-5 mr-2" />
               Basic Information
             </h3>
+            <p className="text-sm text-gray-500 mt-2">
+              Choose a <strong>course</strong> and <strong>user</strong> (required). Date range is optional — if you leave dates empty, the last 30 days through today are used.
+            </p>
           </div>
           <div className="card-body space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Course Selection */}
               {(isAdmin() || isTrainer()) && (
                 <div>
                   <label htmlFor="course" className="form-label">
                     Course
                   </label>
                   <select
-                    {...register('course')}
+                    {...register('course', { required: 'Select a course' })}
                     className="form-input"
                     disabled={coursesLoading}
                   >
-                    <option value="">All Courses</option>
+                    <option value="">Select a course</option>
                     {coursesData?.data?.data?.courses?.map(course => (
                       <option key={course._id} value={course._id}>
                         {course.title} ({course.code})
@@ -297,35 +338,40 @@ const AnalyticsEntry = () => {
                   {coursesLoading && (
                     <p className="text-sm text-gray-500 mt-1">Loading courses...</p>
                   )}
+                  {errors.course && (
+                    <p className="form-error mt-1">{errors.course.message}</p>
+                  )}
                 </div>
               )}
-
-              {/* User Selection */}
-              {isAdmin() && (
+              {(isAdmin() || isTrainer()) && (
                 <div>
                   <label htmlFor="user" className="form-label">
-                    User
+                    User (student)
                   </label>
                   <select
-                    {...register('user')}
+                    {...register('user', { required: 'Select a user' })}
                     className="form-input"
-                    disabled={usersLoading}
+                    disabled={isAdmin() ? usersLoading : studentsLoading}
                   >
-                    <option value="">All Users</option>
-                    {usersData?.data?.data?.users?.map(user => (
-                      <option key={user._id} value={user._id}>
-                        {user.firstName} {user.lastName} ({user.role})
+                    <option value="">Select a user</option>
+                    {(isAdmin()
+                      ? usersData?.data?.data?.users
+                      : studentsData?.data?.data?.users
+                    )?.map((u) => (
+                      <option key={u._id} value={u._id}>
+                        {u.firstName} {u.lastName} ({u.role})
                       </option>
                     ))}
                   </select>
-                  {usersLoading && (
+                  {(isAdmin() ? usersLoading : studentsLoading) && (
                     <p className="text-sm text-gray-500 mt-1">Loading users...</p>
+                  )}
+                  {errors.user && (
+                    <p className="form-error mt-1">{errors.user.message}</p>
                   )}
                 </div>
               )}
             </div>
-
-            {/* Date Range */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label htmlFor="startDate" className="form-label">
@@ -350,8 +396,6 @@ const AnalyticsEntry = () => {
             </div>
           </div>
         </div>
-
-        {/* Analytics Data Entry */}
         {selectedAnalyticsType && (
           <div className="card">
             <div className="card-header">
@@ -361,7 +405,6 @@ const AnalyticsEntry = () => {
               </h3>
             </div>
             <div className="card-body">
-              {/* Performance Analytics */}
               {selectedAnalyticsType === 'performance' && (
                 <div className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -416,8 +459,6 @@ const AnalyticsEntry = () => {
                   </div>
                 </div>
               )}
-
-              {/* Attendance Analytics */}
               {selectedAnalyticsType === 'attendance' && (
                 <div className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -459,8 +500,6 @@ const AnalyticsEntry = () => {
                   </div>
                 </div>
               )}
-
-              {/* Engagement Analytics */}
               {selectedAnalyticsType === 'engagement' && (
                 <div className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -502,8 +541,6 @@ const AnalyticsEntry = () => {
                   </div>
                 </div>
               )}
-
-              {/* Progress Analytics */}
               {selectedAnalyticsType === 'progress' && (
                 <div className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -548,8 +585,6 @@ const AnalyticsEntry = () => {
             </div>
           </div>
         )}
-
-        {/* Submit Button */}
         <div className="flex justify-end">
           <button
             type="submit"

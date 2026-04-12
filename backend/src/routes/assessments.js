@@ -6,7 +6,6 @@ const { validateAssessmentCreation, validateAssessmentUpdate } = require('../mid
 
 const router = express.Router();
 
-/** Active enrollment must match the same `enrolledStudents` subdocument. */
 const activeEnrollmentCourseQuery = (userId) => ({
   enrolledStudents: {
     $elemMatch: {
@@ -16,14 +15,11 @@ const activeEnrollmentCourseQuery = (userId) => ({
   }
 });
 
-// @route   GET /api/assessments
-// @desc    Get all assessments
-// @access  Private
 router.get('/', authenticate, async (req, res) => {
   try {
     const { page = 1, limit = 10, course, type, status, sortBy = 'createdAt', sortOrder = 'desc' } = req.query;
 
-    // Build query
+    
     let query = { isActive: true };
     
     if (course) {
@@ -34,20 +30,20 @@ router.get('/', authenticate, async (req, res) => {
       query.type = type;
     }
 
-    // Build sort object
+    
     const sort = {};
     sort[sortBy] = sortOrder === 'asc' ? 1 : -1;
 
-    // Filter based on user role
+    
     if (req.user.role === 'student') {
-      // Students only see published assessments for courses they're actively enrolled in
+      
       const enrolledCourses = await Course.find(activeEnrollmentCourseQuery(req.user._id)).select('_id');
 
       const courseIds = enrolledCourses.map((c) => c._id);
       query.course = { $in: courseIds };
       query.isPublished = true;
     } else if (req.user.role === 'trainer') {
-      // Trainers see assessments they instruct (matches Assessment.instructor; avoids empty $in: [])
+      
       query.instructor = req.user._id;
     }
 
@@ -58,7 +54,7 @@ router.get('/', authenticate, async (req, res) => {
       .limit(limit * 1)
       .skip((page - 1) * limit);
 
-    // Get total count for pagination
+    
     const total = await Assessment.countDocuments(query);
 
     res.json({
@@ -81,10 +77,6 @@ router.get('/', authenticate, async (req, res) => {
   }
 });
 
-// @route   GET /api/assessments/my-assessments
-// @desc    Get assessments for current user
-// @access  Private
-// NOTE: Must be registered before GET /:id so "my-assessments" is not captured as an id.
 router.get('/my-assessments', authenticate, async (req, res) => {
   try {
     let assessments;
@@ -129,9 +121,6 @@ router.get('/my-assessments', authenticate, async (req, res) => {
   }
 });
 
-// @route   GET /api/assessments/upcoming
-// @desc    Get upcoming assessments (student only)
-// @access  Private (Student)
 router.get('/upcoming', authenticate, authorize('student'), async (req, res) => {
   try {
     const enrolledCourses = await Course.find(activeEnrollmentCourseQuery(req.user._id)).select('_id');
@@ -158,9 +147,6 @@ router.get('/upcoming', authenticate, authorize('student'), async (req, res) => 
   }
 });
 
-// @route   GET /api/assessments/:id
-// @desc    Get assessment by ID
-// @access  Private
 router.get('/:id', authenticate, checkResourceAccess('assessment'), async (req, res) => {
   try {
     const assessment = await Assessment.findById(req.params.id)
@@ -184,7 +170,7 @@ router.get('/:id', authenticate, checkResourceAccess('assessment'), async (req, 
       });
     }
 
-    // For students, hide correct answers unless specified
+    
     if (req.user.role === 'student' && !assessment.showCorrectAnswers) {
       assessment.questions.forEach(question => {
         question.correctAnswer = undefined;
@@ -206,9 +192,6 @@ router.get('/:id', authenticate, checkResourceAccess('assessment'), async (req, 
   }
 });
 
-// @route   POST /api/assessments
-// @desc    Create new assessment (admin/trainer only)
-// @access  Private (Admin, Trainer)
 router.post('/', authenticate, authorize('admin', 'trainer'), validateAssessmentCreation, async (req, res) => {
   try {
     const {
@@ -231,7 +214,7 @@ router.post('/', authenticate, authorize('admin', 'trainer'), validateAssessment
       isPublished
     } = req.body;
 
-    // Verify course exists
+    
     const courseDoc = await Course.findById(course);
     if (!courseDoc) {
       return res.status(404).json({
@@ -240,7 +223,7 @@ router.post('/', authenticate, authorize('admin', 'trainer'), validateAssessment
       });
     }
 
-    // Check permissions
+    
     if (req.user.role === 'trainer' && courseDoc.instructor.toString() !== req.user._id.toString()) {
       return res.status(403).json({
         success: false,
@@ -248,7 +231,7 @@ router.post('/', authenticate, authorize('admin', 'trainer'), validateAssessment
       });
     }
 
-    // Create new assessment
+    
     const assessment = new Assessment({
       title,
       description,
@@ -267,17 +250,17 @@ router.post('/', authenticate, authorize('admin', 'trainer'), validateAssessment
       randomizeQuestions: randomizeQuestions || false,
       showResults: showResults !== undefined ? showResults : true,
       showCorrectAnswers: showCorrectAnswers || false,
-      // Default published so enrolled students can see and submit; set false for drafts
+      
       isPublished: isPublished !== false
     });
 
     await assessment.save();
 
-    // Add assessment to course
+    
     courseDoc.assessments.push(assessment._id);
     await courseDoc.save();
 
-    // Populate for response
+    
     await assessment.populate('course', 'title code');
     await assessment.populate('instructor', 'firstName lastName email');
 
@@ -297,9 +280,6 @@ router.post('/', authenticate, authorize('admin', 'trainer'), validateAssessment
   }
 });
 
-// @route   PUT /api/assessments/:id
-// @desc    Update assessment
-// @access  Private
 router.put('/:id', authenticate, checkResourceAccess('assessment'), validateAssessmentUpdate, async (req, res) => {
   try {
     const assessment = await Assessment.findById(req.params.id);
@@ -328,7 +308,7 @@ router.put('/:id', authenticate, checkResourceAccess('assessment'), validateAsse
       isPublished
     } = req.body;
 
-    // Check permissions
+    
     if (req.user.role === 'admin' || 
         (req.user.role === 'trainer' && assessment.instructor.toString() === req.user._id.toString())) {
       if (title) assessment.title = title;
@@ -373,9 +353,6 @@ router.put('/:id', authenticate, checkResourceAccess('assessment'), validateAsse
   }
 });
 
-// @route   DELETE /api/assessments/:id
-// @desc    Delete assessment (admin/trainer only)
-// @access  Private (Admin, Trainer)
 router.delete('/:id', authenticate, authorize('admin', 'trainer'), async (req, res) => {
   try {
     const assessment = await Assessment.findById(req.params.id);
@@ -386,7 +363,7 @@ router.delete('/:id', authenticate, authorize('admin', 'trainer'), async (req, r
       });
     }
 
-    // Check permissions
+    
     if (req.user.role === 'trainer' && assessment.instructor.toString() !== req.user._id.toString()) {
       return res.status(403).json({
         success: false,
@@ -394,7 +371,7 @@ router.delete('/:id', authenticate, authorize('admin', 'trainer'), async (req, r
       });
     }
 
-    // Soft delete by setting isActive to false
+    
     assessment.isActive = false;
     await assessment.save();
 
@@ -411,9 +388,6 @@ router.delete('/:id', authenticate, authorize('admin', 'trainer'), async (req, r
   }
 });
 
-// @route   POST /api/assessments/:id/submit
-// @desc    Submit assessment (student only)
-// @access  Private (Student)
 router.post('/:id/submit', authenticate, authorize('student'), async (req, res) => {
   try {
     const { answers, timeSpent } = req.body;
@@ -435,7 +409,7 @@ router.post('/:id/submit', authenticate, authorize('student'), async (req, res) 
       });
     }
 
-    // Check if student is enrolled in the course
+    
     const isEnrolled = assessment.course.enrolledStudents.some(
       enrollment => enrollment.student.toString() === req.user._id.toString() && 
                    enrollment.status === 'active'
@@ -448,7 +422,7 @@ router.post('/:id/submit', authenticate, authorize('student'), async (req, res) 
       });
     }
 
-    // Submit assessment
+    
     await assessment.submitAssessment(req.user._id, answers, timeSpent);
 
     res.json({
@@ -464,9 +438,6 @@ router.post('/:id/submit', authenticate, authorize('student'), async (req, res) 
   }
 });
 
-// @route   POST /api/assessments/:id/grade/:studentId
-// @desc    Grade student submission (admin/trainer only)
-// @access  Private (Admin, Trainer)
 router.post('/:id/grade/:studentId', authenticate, authorize('admin', 'trainer'), async (req, res) => {
   try {
     const { score, feedback } = req.body;
@@ -486,7 +457,7 @@ router.post('/:id/grade/:studentId', authenticate, authorize('admin', 'trainer')
       });
     }
 
-    // Check permissions
+    
     if (req.user.role === 'trainer' && assessment.instructor.toString() !== req.user._id.toString()) {
       return res.status(403).json({
         success: false,
@@ -494,7 +465,7 @@ router.post('/:id/grade/:studentId', authenticate, authorize('admin', 'trainer')
       });
     }
 
-    // Grade submission
+    
     await assessment.gradeSubmission(req.params.studentId, score, feedback, req.user._id);
 
     res.json({

@@ -7,9 +7,6 @@ const { authenticate } = require('../middleware/auth');
 
 const router = express.Router();
 
-// @route   POST /api/auth/register
-// @desc    Register a new user
-// @access  Public
 router.post('/register', validateUserRegistration, async (req, res) => {
   try {
     const { 
@@ -29,7 +26,7 @@ router.post('/register', validateUserRegistration, async (req, res) => {
     const phone = phoneRaw && String(phoneRaw).trim() ? String(phoneRaw).trim() : undefined;
     const dateOfBirth = dobRaw && String(dobRaw).trim() ? dobRaw : undefined;
 
-    // Check if user already exists
+    
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({
@@ -38,7 +35,7 @@ router.post('/register', validateUserRegistration, async (req, res) => {
       });
     }
 
-    // Check if studentId already exists (if provided)
+    
     if (studentId) {
       const existingStudentId = await User.findOne({ studentId });
       if (existingStudentId) {
@@ -49,7 +46,7 @@ router.post('/register', validateUserRegistration, async (req, res) => {
       }
     }
 
-    // Create new user
+    
     const user = new User({
       firstName,
       lastName,
@@ -66,7 +63,7 @@ router.post('/register', validateUserRegistration, async (req, res) => {
 
     await user.save();
 
-    // Generate token
+    
     const token = generateToken(user._id, user.role);
 
     res.status(201).json({
@@ -88,7 +85,7 @@ router.post('/register', validateUserRegistration, async (req, res) => {
   } catch (error) {
     console.error('Registration error:', error);
     
-    // Handle MongoDB duplicate key errors
+    
     if (error.code === 11000) {
       const field = Object.keys(error.keyValue)[0];
       const value = error.keyValue[field];
@@ -98,7 +95,7 @@ router.post('/register', validateUserRegistration, async (req, res) => {
       });
     }
     
-    // Handle validation errors
+    
     if (error.name === 'ValidationError') {
       const messages = Object.values(error.errors).map(err => err.message);
       return res.status(400).json({
@@ -115,14 +112,11 @@ router.post('/register', validateUserRegistration, async (req, res) => {
   }
 });
 
-// @route   POST /api/auth/login
-// @desc    Login user
-// @access  Public
 router.post('/login', validateUserLogin, async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // Find user by email (include password field)
+    
     const user = await User.findOne({ email }).select('+password');
     if (!user) {
       return res.status(401).json({
@@ -131,7 +125,7 @@ router.post('/login', validateUserLogin, async (req, res) => {
       });
     }
 
-    // Check if user is active
+    
     if (!user.isActive) {
       return res.status(401).json({
         success: false,
@@ -139,7 +133,7 @@ router.post('/login', validateUserLogin, async (req, res) => {
       });
     }
 
-    // Check password
+    
     const isPasswordValid = await user.comparePassword(password);
     if (!isPasswordValid) {
       return res.status(401).json({
@@ -148,11 +142,11 @@ router.post('/login', validateUserLogin, async (req, res) => {
       });
     }
 
-    // Update last login
+    
     user.lastLogin = new Date();
     await user.save();
 
-    // Generate token
+    
     const token = generateToken(user._id, user.role);
 
     res.json({
@@ -181,9 +175,6 @@ router.post('/login', validateUserLogin, async (req, res) => {
   }
 });
 
-// @route   GET /api/auth/profile
-// @desc    Get current user profile
-// @access  Private
 router.get('/profile', authenticate, async (req, res) => {
   try {
     const user = await User.findById(req.user._id)
@@ -212,9 +203,6 @@ router.get('/profile', authenticate, async (req, res) => {
   }
 });
 
-// @route   PUT /api/auth/profile
-// @desc    Update current user profile
-// @access  Private
 router.put('/profile', authenticate, async (req, res) => {
   try {
     const { firstName, lastName, phone, dateOfBirth, address } = req.body;
@@ -227,7 +215,7 @@ router.put('/profile', authenticate, async (req, res) => {
       });
     }
 
-    // Update allowed fields
+    
     if (firstName) user.firstName = firstName;
     if (lastName) user.lastName = lastName;
     if (phone !== undefined) user.phone = phone;
@@ -252,9 +240,6 @@ router.put('/profile', authenticate, async (req, res) => {
   }
 });
 
-// @route   POST /api/auth/change-password
-// @desc    Change user password
-// @access  Private
 router.post('/change-password', authenticate, async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
@@ -266,7 +251,7 @@ router.post('/change-password', authenticate, async (req, res) => {
       });
     }
 
-    // Get user with password
+    
     const user = await User.findById(req.user._id).select('+password');
     if (!user) {
       return res.status(404).json({
@@ -275,7 +260,7 @@ router.post('/change-password', authenticate, async (req, res) => {
       });
     }
 
-    // Verify current password
+    
     const isCurrentPasswordValid = await user.comparePassword(currentPassword);
     if (!isCurrentPasswordValid) {
       return res.status(400).json({
@@ -284,7 +269,7 @@ router.post('/change-password', authenticate, async (req, res) => {
       });
     }
 
-    // Validate new password
+    
     if (newPassword.length < 6) {
       return res.status(400).json({
         success: false,
@@ -292,7 +277,7 @@ router.post('/change-password', authenticate, async (req, res) => {
       });
     }
 
-    // Update password
+    
     user.password = newPassword;
     await user.save();
 
@@ -309,21 +294,15 @@ router.post('/change-password', authenticate, async (req, res) => {
   }
 });
 
-// @route   POST /api/auth/logout
-// @desc    Logout user (client-side token removal)
-// @access  Private
 router.post('/logout', authenticate, (req, res) => {
-  // In a stateless JWT implementation, logout is handled client-side
-  // by removing the token from storage
+  
+  
   res.json({
     success: true,
     message: 'Logout successful'
   });
 });
 
-// @route   GET /api/auth/verify-token
-// @desc    Verify if token is valid
-// @access  Private
 router.get('/verify-token', authenticate, (req, res) => {
   res.json({
     success: true,
