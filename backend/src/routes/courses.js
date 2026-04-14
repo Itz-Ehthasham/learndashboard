@@ -281,6 +281,65 @@ router.delete('/:id', authenticate, authorize('admin'), async (req, res) => {
   }
 });
 
+router.post('/:id/enroll-student', authenticate, authorize('admin'), async (req, res) => {
+  try {
+    const { studentId } = req.body;
+    if (!studentId) {
+      return res.status(400).json({
+        success: false,
+        message: 'studentId is required',
+      });
+    }
+
+    const course = await Course.findById(req.params.id);
+    if (!course) {
+      return res.status(404).json({
+        success: false,
+        message: 'Course not found',
+      });
+    }
+
+    if (!course.isActive) {
+      return res.status(400).json({
+        success: false,
+        message: 'Course is not available for enrollment',
+      });
+    }
+
+    const studentUser = await User.findById(studentId);
+    if (!studentUser || studentUser.role !== 'student') {
+      return res.status(400).json({
+        success: false,
+        message: 'Valid student user is required',
+      });
+    }
+
+    await course.enrollStudent(studentId);
+
+    const alreadyLinked = studentUser.enrolledCourses.some(
+      (cid) => cid.toString() === course._id.toString()
+    );
+    if (!alreadyLinked) {
+      studentUser.enrolledCourses.push(course._id);
+      await studentUser.save();
+    }
+
+    const updated = await Course.findById(course._id).populate('instructor', 'firstName lastName email');
+
+    res.json({
+      success: true,
+      message: 'Student enrolled in course successfully',
+      data: { course: updated },
+    });
+  } catch (error) {
+    console.error('Admin enroll student error:', error);
+    res.status(400).json({
+      success: false,
+      message: error.message || 'Server error while enrolling student',
+    });
+  }
+});
+
 router.post('/:id/enroll', authenticate, authorize('student'), async (req, res) => {
   try {
     const course = await Course.findById(req.params.id);

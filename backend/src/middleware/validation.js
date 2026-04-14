@@ -1,4 +1,5 @@
 const { body, validationResult } = require('express-validator');
+const { DEFAULT_ADMIN_EMAIL } = require('../utils/defaultAdmin');
 
 const validate = (req, res, next) => {
   const errors = validationResult(req);
@@ -44,11 +45,6 @@ const validateUserRegistration = [
     .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
     .withMessage('Password must contain at least one lowercase letter, one uppercase letter, and one number'),
     
-  body('role')
-    .optional()
-    .isIn(['admin', 'trainer', 'student'])
-    .withMessage('Role must be admin, trainer, or student'),
-    
   body('phone')
     .optional({ values: 'falsy' })
     .trim()
@@ -65,8 +61,18 @@ const validateUserRegistration = [
 
 const validateUserLogin = [
   body('email')
+    .trim()
+    .notEmpty()
+    .withMessage('Email or admin username is required')
+    .customSanitizer((value) => {
+      const v = String(value || '').trim();
+      if (/^admin$/i.test(v)) {
+        return DEFAULT_ADMIN_EMAIL;
+      }
+      return v;
+    })
     .isEmail()
-    .withMessage('Please provide a valid email')
+    .withMessage('Please provide a valid email, or Admin for the default admin account')
     .normalizeEmail(),
     
   body('password')

@@ -103,6 +103,7 @@ const UserDetail = () => {
   }
 
   const isSelf = String(currentUser?._id) === String(user?._id);
+  const isAdminViewer = currentUser?.role === 'admin';
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -140,27 +141,31 @@ const UserDetail = () => {
             <input {...register('phone')} className="form-input" />
           </div>
 
-          <div>
-            <label className="form-label">Role</label>
-            <select {...register('role')} className="form-input" disabled={isSelf}>
-              <option value="student">Student</option>
-              <option value="trainer">Trainer</option>
-              <option value="admin">Administrator</option>
-            </select>
-            {isSelf && (
-              <p className="text-sm text-amber-700 mt-1">You cannot change your own role here.</p>
-            )}
-          </div>
+          {isAdminViewer && (
+            <>
+              <div>
+                <label className="form-label">Role</label>
+                <select {...register('role')} className="form-input" disabled={isSelf}>
+                  <option value="student">Student</option>
+                  <option value="trainer">Trainer / Instructor</option>
+                  <option value="admin">Administrator</option>
+                </select>
+                {isSelf && (
+                  <p className="text-sm text-amber-700 mt-1">You cannot change your own role here.</p>
+                )}
+              </div>
 
-          <div className="flex items-center gap-2">
-            <input type="checkbox" id="isActive" {...register('isActive')} disabled={isSelf} />
-            <label htmlFor="isActive" className="text-sm text-gray-700">
-              Active account
-            </label>
-            {isSelf && (
-              <span className="text-sm text-amber-700">(Use another admin to deactivate your account.)</span>
-            )}
-          </div>
+              <div className="flex items-center gap-2">
+                <input type="checkbox" id="isActive" {...register('isActive')} disabled={isSelf} />
+                <label htmlFor="isActive" className="text-sm text-gray-700">
+                  Active account
+                </label>
+                {isSelf && (
+                  <span className="text-sm text-amber-700">(Use another admin to deactivate your account.)</span>
+                )}
+              </div>
+            </>
+          )}
 
           <div className="flex flex-wrap gap-3 pt-4">
             <button
@@ -170,14 +175,16 @@ const UserDetail = () => {
             >
               {updateMutation.isLoading ? 'Saving…' : 'Save changes'}
             </button>
-            <button
-              type="button"
-              className="btn btn-outline text-red-600 border-red-300 hover:bg-red-50"
-              onClick={handleDelete}
-              disabled={isSelf || deleteMutation.isLoading}
-            >
-              {deleteMutation.isLoading ? 'Deleting…' : 'Delete user'}
-            </button>
+            {isAdminViewer && (
+              <button
+                type="button"
+                className="btn btn-outline text-red-600 border-red-300 hover:bg-red-50"
+                onClick={handleDelete}
+                disabled={isSelf || deleteMutation.isLoading}
+              >
+                {deleteMutation.isLoading ? 'Deleting…' : 'Delete user'}
+              </button>
+            )}
           </div>
         </div>
       </form>

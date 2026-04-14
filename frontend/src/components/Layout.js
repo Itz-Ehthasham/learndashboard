@@ -13,7 +13,8 @@ import {
   ArrowRightOnRectangleIcon,
   Bars3Icon,
   XMarkIcon,
-  AcademicCapIcon
+  AcademicCapIcon,
+  CalendarDaysIcon,
 } from '@heroicons/react/24/outline';
 
 const Layout = () => {
@@ -66,7 +67,13 @@ const Layout = () => {
       name: 'Students',
       href: '/students',
       icon: UserGroupIcon,
-      current: location.pathname.startsWith('/students'),
+      current: location.pathname.startsWith('/students') && !location.pathname.startsWith('/students/attendance'),
+    });
+    navigation.push({
+      name: 'Daily attendance',
+      href: '/students/attendance',
+      icon: CalendarDaysIcon,
+      current: location.pathname.startsWith('/students/attendance'),
     });
   }
 

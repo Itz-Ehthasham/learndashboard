@@ -1,13 +1,12 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useMemo } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { useQuery, useMutation } from 'react-query';
-import { userService, courseService } from '../services/api';
+import { userService, courseService, attendanceService } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 import {
   UserGroupIcon,
-  AcademicCapIcon,
   BookOpenIcon,
   CalendarIcon,
   PlusIcon,
@@ -16,18 +15,31 @@ import {
   PencilIcon,
   TrashIcon,
   DocumentArrowDownIcon,
-  DocumentArrowUpIcon
+  DocumentArrowUpIcon,
+  CalendarDaysIcon,
 } from '@heroicons/react/24/outline';
+
+function localDateInputValue(d = new Date()) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
 
 const StudentManagement = () => {
   const navigate = useNavigate();
-  const { user, isAdmin, isTrainer } = useAuth();
+  const { isAdmin } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedStudents, setSelectedStudents] = useState([]);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingStudent, setEditingStudent] = useState(null);
   const [showBulkImport, setShowBulkImport] = useState(false);
+  const [enrollModalStudent, setEnrollModalStudent] = useState(null);
+  const [enrollCourseId, setEnrollCourseId] = useState('');
+  const [attendanceModalStudent, setAttendanceModalStudent] = useState(null);
+  const [attendanceCourseId, setAttendanceCourseId] = useState('');
+  const [attendanceDate, setAttendanceDate] = useState(localDateInputValue);
+  const [attendanceStatus, setAttendanceStatus] = useState('present');
 
   const {
     register,
@@ -41,16 +53,47 @@ const StudentManagement = () => {
     data: usersData,
     isLoading: usersLoading,
     refetch: refetchUsers
-  } = useQuery('students', () => userService.getUsers({ role: 'student' }), {
+  } = useQuery('students', () => userService.getUsers({ role: 'student', limit: 500 }), {
     enabled: true
   });
 
   const {
     data: coursesData,
     isLoading: coursesLoading
-  } = useQuery('courses', courseService.getCourses, {
+  } = useQuery('courses', () => courseService.getCourses({ limit: 500 }), {
     enabled: true
   });
+
+  const allCourses = coursesData?.data?.data?.courses ?? [];
+
+  const enrollAdminMutation = useMutation(
+    ({ courseId, studentId }) => courseService.enrollStudentAsAdmin(courseId, studentId),
+    {
+      onSuccess: () => {
+        toast.success('Student enrolled in course');
+        setEnrollModalStudent(null);
+        setEnrollCourseId('');
+        refetchUsers();
+      },
+      onError: (error) => {
+        toast.error(error.response?.data?.message || 'Enrollment failed');
+      },
+    }
+  );
+
+  const attendanceQuickMutation = useMutation(
+    (payload) => attendanceService.saveAttendanceDayBulk(payload),
+    {
+      onSuccess: () => {
+        toast.success('Attendance saved');
+        setAttendanceModalStudent(null);
+        refetchUsers();
+      },
+      onError: (error) => {
+        toast.error(error.response?.data?.message || 'Could not save attendance');
+      },
+    }
+  );
 
   const createStudentMutation = useMutation(
     userService.createUser,
@@ -112,18 +155,14 @@ const StudentManagement = () => {
       const studentData = {
         ...data,
         role: 'student',
-        password: 'Student123', 
+        password: 'Student123',
         academicInfo: {
           section: data.section,
           year: data.year ? parseInt(data.year) : undefined,
           semester: data.semester,
           batch: data.batch
         },
-        attendance: {
-          totalSessions: data.totalSessions ? parseInt(data.totalSessions) : 0,
-          attendedSessions: data.attendedSessions ? parseInt(data.attendedSessions) : 0
-        },
-                courses: data.courses || []
+        courses: data.courses || []
       };
 
       console.log('Student data prepared:', studentData);
@@ -150,8 +189,6 @@ const StudentManagement = () => {
     setValue('year', student.academicInfo?.year);
     setValue('semester', student.academicInfo?.semester);
     setValue('batch', student.academicInfo?.batch);
-    setValue('totalSessions', student.attendance?.totalSessions);
-    setValue('attendedSessions', student.attendance?.attendedSessions);
     setValue('courses', student.enrolledCourses?.map(c => c._id) || []);
     setShowCreateForm(true);
   };
@@ -160,6 +197,53 @@ const StudentManagement = () => {
     if (window.confirm(`Are you sure you want to delete ${student.firstName} ${student.lastName}?`)) {
       deleteStudentMutation.mutate(student._id);
     }
+  };
+
+  const courseIdOf = (c) => (c && typeof c === 'object' ? c._id : c);
+
+  const coursesAvailableForEnroll = useMemo(() => {
+    if (!enrollModalStudent) return [];
+    const enrolledIds = new Set(
+      (enrollModalStudent.enrolledCourses || []).map(courseIdOf).filter(Boolean).map(String)
+    );
+    return allCourses.filter((c) => c.isActive !== false && !enrolledIds.has(String(c._id)));
+  }, [enrollModalStudent, allCourses]);
+
+  const openEnrollModal = (student) => {
+    setEnrollModalStudent(student);
+    setEnrollCourseId('');
+  };
+
+  const openAttendanceModal = (student) => {
+    setAttendanceModalStudent(student);
+    const enrolled = student.enrolledCourses || [];
+    const firstId = enrolled[0] ? courseIdOf(enrolled[0]) : '';
+    setAttendanceCourseId(firstId ? String(firstId) : '');
+    setAttendanceDate(localDateInputValue());
+    setAttendanceStatus('present');
+  };
+
+  const submitEnrollModal = () => {
+    if (!enrollModalStudent || !enrollCourseId) {
+      toast.error('Select a course');
+      return;
+    }
+    enrollAdminMutation.mutate({
+      courseId: enrollCourseId,
+      studentId: enrollModalStudent._id,
+    });
+  };
+
+  const submitAttendanceModal = () => {
+    if (!attendanceModalStudent || !attendanceCourseId) {
+      toast.error('Select a course');
+      return;
+    }
+    attendanceQuickMutation.mutate({
+      courseId: attendanceCourseId,
+      date: attendanceDate,
+      entries: [{ studentId: attendanceModalStudent._id, status: attendanceStatus }],
+    });
   };
 
   const handleBulkImport = (event) => {
@@ -183,8 +267,6 @@ const StudentManagement = () => {
               year: parseInt(values[5]) || undefined,
               semester: values[6]?.trim(),
               batch: values[7]?.trim(),
-              totalSessions: parseInt(values[8]) || 0,
-              attendedSessions: parseInt(values[9]) || 0,
               role: 'student'
             };
           }).filter(student => student.email);
@@ -205,9 +287,9 @@ const StudentManagement = () => {
   };
 
   const downloadSampleCSV = () => {
-    const csvContent = `firstName,lastName,email,studentId,section,year,semester,batch,totalSessions,attendedSessions
-John,Doe,john.doe@school.com,ST001,A,3,1,2024,20,18
-Jane,Smith,jane.smith@school.com,ST002,B,3,1,2024,20,19`;
+    const csvContent = `firstName,lastName,email,studentId,section,year,semester,batch
+John,Doe,john.doe@school.com,ST001,A,3,1,2024
+Jane,Smith,jane.smith@school.com,ST002,B,3,1,2024`;
     
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
@@ -246,8 +328,18 @@ Jane,Smith,jane.smith@school.com,ST002,B,3,1,2024,20,19`;
         </button>
         <h1 className="text-2xl font-bold text-gray-900">Student Management</h1>
         <p className="mt-1 text-sm text-gray-600">
-          Manage student details, attendance, and academic information.
+          Manage student details and academic information. Record class attendance per day on{' '}
+          <Link to="/students/attendance" className="text-blue-600 hover:text-blue-700 font-medium">
+            Daily attendance
+          </Link>
+          .
         </p>
+      </div>
+      <div className="mb-4">
+        <Link to="/students/attendance" className="btn btn-secondary inline-flex items-center">
+          <CalendarIcon className="h-4 w-4 mr-2" />
+          Daily attendance
+        </Link>
       </div>
       <div className="card mb-6">
         <div className="card-body">
@@ -349,7 +441,7 @@ Jane,Smith,jane.smith@school.com,ST002,B,3,1,2024,20,19`;
                 <dl>
                   <dt className="text-sm font-medium text-gray-500 truncate">Active Courses</dt>
                   <dd className="text-lg font-semibold text-gray-900">
-                    {coursesData?.data?.data?.courses?.length || 0}
+                    {allCourses.length || 0}
                   </dd>
                 </dl>
               </div>
@@ -424,16 +516,40 @@ Jane,Smith,jane.smith@school.com,ST002,B,3,1,2024,20,19`;
                       </span>
                     </td>
                     <td className="table-cell">
-                      <div className="flex items-center space-x-2">
+                      <div className="flex items-center flex-wrap gap-1">
+                        {isAdmin() && (
+                          <>
+                            <button
+                              type="button"
+                              title="Enroll in a course"
+                              onClick={() => openEnrollModal(student)}
+                              className="p-1.5 rounded-md text-emerald-600 hover:bg-emerald-50"
+                            >
+                              <BookOpenIcon className="h-4 w-4" />
+                            </button>
+                            <button
+                              type="button"
+                              title="Record attendance"
+                              onClick={() => openAttendanceModal(student)}
+                              className="p-1.5 rounded-md text-amber-600 hover:bg-amber-50"
+                            >
+                              <CalendarDaysIcon className="h-4 w-4" />
+                            </button>
+                          </>
+                        )}
                         <button
+                          type="button"
+                          title="Edit student"
                           onClick={() => handleEdit(student)}
-                          className="text-blue-600 hover:text-blue-700"
+                          className="p-1.5 rounded-md text-blue-600 hover:bg-blue-50"
                         >
                           <PencilIcon className="h-4 w-4" />
                         </button>
                         <button
+                          type="button"
+                          title="Delete student"
                           onClick={() => handleDelete(student)}
-                          className="text-red-600 hover:text-red-700"
+                          className="p-1.5 rounded-md text-red-600 hover:bg-red-50"
                         >
                           <TrashIcon className="h-4 w-4" />
                         </button>
@@ -573,25 +689,6 @@ Jane,Smith,jane.smith@school.com,ST002,B,3,1,2024,20,19`;
                         placeholder="2024"
                       />
                     </div>
-                    <div>
-                      <label className="form-label">Total Sessions</label>
-                      <input
-                        {...register('totalSessions', { min: 0, valueAsNumber: true })}
-                        type="number"
-                        className="form-input"
-                        placeholder="20"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="form-label">Attended Sessions</label>
-                      <input
-                        {...register('attendedSessions', { min: 0, valueAsNumber: true })}
-                        type="number"
-                        className="form-input"
-                        placeholder="18"
-                      />
-                    </div>
                     <div className="md:col-span-2">
                       <label className="form-label">Enrolled Courses</label>
                       <select
@@ -686,6 +783,156 @@ Jane,Smith,jane.smith@school.com,ST002,B,3,1,2024,20,19`;
                   className="btn btn-primary w-full sm:ml-3 sm:w-auto"
                 >
                   Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {enrollModalStudent && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 sm:p-0">
+            <button
+              type="button"
+              className="fixed inset-0 bg-gray-500 opacity-75 transition-opacity border-0 cursor-default"
+              aria-label="Close"
+              onClick={() => {
+                setEnrollModalStudent(null);
+                setEnrollCourseId('');
+              }}
+            />
+            <div className="relative bg-white rounded-lg shadow-xl max-w-md w-full text-left">
+              <div className="p-6">
+                <h3 className="text-lg font-medium text-gray-900 mb-1">Enroll in course</h3>
+                <p className="text-sm text-gray-600 mb-4">
+                  {enrollModalStudent.firstName} {enrollModalStudent.lastName}
+                </p>
+                <label className="form-label">Course</label>
+                <select
+                  className="form-input"
+                  value={enrollCourseId}
+                  onChange={(e) => setEnrollCourseId(e.target.value)}
+                >
+                  <option value="">Select a course</option>
+                  {coursesAvailableForEnroll.map((c) => (
+                    <option key={c._id} value={c._id}>
+                      {c.code} — {c.title}
+                    </option>
+                  ))}
+                </select>
+                {coursesAvailableForEnroll.length === 0 && (
+                  <p className="text-sm text-amber-700 mt-2">This student is already in all available courses.</p>
+                )}
+              </div>
+              <div className="bg-gray-50 px-6 py-3 flex justify-end gap-2">
+                <button
+                  type="button"
+                  className="btn btn-outline"
+                  onClick={() => {
+                    setEnrollModalStudent(null);
+                    setEnrollCourseId('');
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  disabled={!enrollCourseId || enrollAdminMutation.isLoading}
+                  onClick={submitEnrollModal}
+                >
+                  {enrollAdminMutation.isLoading ? 'Enrolling…' : 'Enroll'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {attendanceModalStudent && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 sm:p-0">
+            <button
+              type="button"
+              className="fixed inset-0 bg-gray-500 opacity-75 transition-opacity border-0 cursor-default"
+              aria-label="Close"
+              onClick={() => setAttendanceModalStudent(null)}
+            />
+            <div className="relative bg-white rounded-lg shadow-xl max-w-md w-full text-left">
+              <div className="p-6">
+                <h3 className="text-lg font-medium text-gray-900 mb-1">Record attendance</h3>
+                <p className="text-sm text-gray-600 mb-4">
+                  {attendanceModalStudent.firstName} {attendanceModalStudent.lastName}
+                </p>
+                {(attendanceModalStudent.enrolledCourses || []).length === 0 ? (
+                  <p className="text-sm text-amber-700">
+                    Enroll this student in a course first, then record attendance for that class day.
+                  </p>
+                ) : (
+                  <>
+                    <label className="form-label">Course</label>
+                    <select
+                      className="form-input mb-3"
+                      value={attendanceCourseId}
+                      onChange={(e) => setAttendanceCourseId(e.target.value)}
+                    >
+                      {(attendanceModalStudent.enrolledCourses || []).map((c) => {
+                        const id = courseIdOf(c);
+                        const idStr = String(id);
+                        const fromList = allCourses.find((ac) => String(ac._id) === idStr);
+                        const meta = typeof c === 'object' && c.code ? c : fromList;
+                        const label =
+                          meta && meta.code
+                            ? `${meta.code} — ${meta.title || ''}`.trim()
+                            : `Course ${idStr}`;
+                        return (
+                          <option key={idStr} value={idStr}>
+                            {label}
+                          </option>
+                        );
+                      })}
+                    </select>
+                    <label className="form-label">Date</label>
+                    <input
+                      type="date"
+                      className="form-input mb-3"
+                      value={attendanceDate}
+                      onChange={(e) => setAttendanceDate(e.target.value)}
+                    />
+                    <label className="form-label">Status</label>
+                    <select
+                      className="form-input"
+                      value={attendanceStatus}
+                      onChange={(e) => setAttendanceStatus(e.target.value)}
+                    >
+                      <option value="present">Present</option>
+                      <option value="late">Late</option>
+                      <option value="excused">Excused</option>
+                      <option value="absent">Absent</option>
+                    </select>
+                  </>
+                )}
+              </div>
+              <div className="bg-gray-50 px-6 py-3 flex justify-end gap-2">
+                <button
+                  type="button"
+                  className="btn btn-outline"
+                  onClick={() => setAttendanceModalStudent(null)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  disabled={
+                    (attendanceModalStudent.enrolledCourses || []).length === 0 ||
+                    !attendanceCourseId ||
+                    attendanceQuickMutation.isLoading
+                  }
+                  onClick={submitAttendanceModal}
+                >
+                  {attendanceQuickMutation.isLoading ? 'Saving…' : 'Save attendance'}
                 </button>
               </div>
             </div>

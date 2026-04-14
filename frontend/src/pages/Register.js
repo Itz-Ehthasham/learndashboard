@@ -28,7 +28,6 @@ const Register = () => {
         lastName: data.lastName,
         email: data.email,
         password: data.password,
-        role: data.role,
       };
       if (data.phone?.trim()) payload.phone = data.phone.trim();
       if (data.dateOfBirth?.trim()) payload.dateOfBirth = data.dateOfBirth;
@@ -132,24 +131,6 @@ const Register = () => {
               />
               {errors.email && (
                 <p className="form-error">{errors.email.message}</p>
-              )}
-            </div>
-
-            <div>
-              <label htmlFor="role" className="form-label">
-                Role
-              </label>
-              <select
-                {...register('role', { required: 'Role is required' })}
-                className="form-input"
-              >
-                <option value="">Select a role</option>
-                <option value="student">Student</option>
-                <option value="trainer">Trainer/Instructor</option>
-                <option value="admin">Administrator</option>
-              </select>
-              {errors.role && (
-                <p className="form-error">{errors.role.message}</p>
               )}
             </div>
 

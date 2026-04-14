@@ -27,6 +27,7 @@ import ReportView from './pages/ReportView';
 import Users from './pages/Users';
 import UserDetail from './pages/UserDetail';
 import StudentManagement from './pages/StudentManagement';
+import DailyAttendance from './pages/DailyAttendance';
 import NotFound from './pages/NotFound';
 
 const queryClient = new QueryClient({
@@ -69,8 +70,13 @@ function App() {
                 <Route path="analytics/entry" element={<ProtectedRoute><AnalyticsEntry /></ProtectedRoute>} />
                 <Route path="analytics/view/:id" element={<ProtectedRoute><AnalyticsDetail /></ProtectedRoute>} />
                 <Route path="students" element={
-                  <ProtectedRoute>
+                  <ProtectedRoute requiredAnyOfRoles={['admin', 'trainer']}>
                     <StudentManagement />
+                  </ProtectedRoute>
+                } />
+                <Route path="students/attendance" element={
+                  <ProtectedRoute requiredAnyOfRoles={['admin', 'trainer']}>
+                    <DailyAttendance />
                   </ProtectedRoute>
                 } />
                 <Route path="users" element={

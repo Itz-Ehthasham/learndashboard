@@ -7,9 +7,10 @@ export function normalizeReportRows(report) {
   return [report];
 }
 
-function exportToCSV(data, filename) {
+export function exportReportToCSV(data, filename) {
   const rows = normalizeReportRows(data?.report);
-  if (!rows.length) return;
+  if (!rows.length) return false;
+  const safeName = String(filename || 'report').replace(/[/\\?%*:|"<>]/g, '-');
   const csvContent = [
     Object.keys(rows[0] || {}).join(','),
     ...rows.map((row) =>
@@ -22,13 +23,15 @@ function exportToCSV(data, filename) {
   const url = window.URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `${filename}.csv`;
+  a.download = `${safeName}.csv`;
   a.click();
   window.URL.revokeObjectURL(url);
+  return true;
 }
 
-function exportToJSON(data, filename) {
-  if (!data) return;
+export function exportReportToJSON(data, filename) {
+  if (!data) return false;
+  const safeName = String(filename || 'report').replace(/[/\\?%*:|"<>]/g, '-');
   const jsonContent = JSON.stringify(
     { report: data.report, period: data.period, generatedAt: data.generatedAt },
     null,
@@ -38,9 +41,10 @@ function exportToJSON(data, filename) {
   const url = window.URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `${filename}.json`;
+  a.download = `${safeName}.json`;
   a.click();
   window.URL.revokeObjectURL(url);
+  return true;
 }
 
 export default function GeneratedReportDisplay({ reportData, filePrefix = 'report' }) {
@@ -56,7 +60,7 @@ export default function GeneratedReportDisplay({ reportData, filePrefix = 'repor
         <div className="flex items-center space-x-2">
           <button
             type="button"
-            onClick={() => exportToCSV(reportData, `${filePrefix}`)}
+            onClick={() => exportReportToCSV(reportData, `${filePrefix}`)}
             className="btn btn-secondary btn-sm"
           >
             <ArrowDownTrayIcon className="h-4 w-4 mr-2" />
@@ -64,7 +68,7 @@ export default function GeneratedReportDisplay({ reportData, filePrefix = 'repor
           </button>
           <button
             type="button"
-            onClick={() => exportToJSON(reportData, `${filePrefix}`)}
+            onClick={() => exportReportToJSON(reportData, `${filePrefix}`)}
             className="btn btn-secondary btn-sm"
           >
             <ArrowDownTrayIcon className="h-4 w-4 mr-2" />

@@ -3,8 +3,8 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Spinner } from './UI/Spinner';
 
-const ProtectedRoute = ({ children, requiredRole }) => {
-  const { isAuthenticated, isLoading, user, hasRole } = useAuth();
+const ProtectedRoute = ({ children, requiredRole, requiredAnyOfRoles }) => {
+  const { isAuthenticated, isLoading, hasRole, hasAnyRole } = useAuth();
   const location = useLocation();
 
   
@@ -31,6 +31,26 @@ const ProtectedRoute = ({ children, requiredRole }) => {
             You don't have permission to access this page.
           </p>
           <button
+            onClick={() => window.history.back()}
+            className="mt-4 btn btn-primary"
+          >
+            Go Back
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (requiredAnyOfRoles?.length && !hasAnyRole(requiredAnyOfRoles)) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h1>
+          <p className="text-gray-600">
+            You don&apos;t have permission to access this page.
+          </p>
+          <button
+            type="button"
             onClick={() => window.history.back()}
             className="mt-4 btn btn-primary"
           >

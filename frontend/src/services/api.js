@@ -93,6 +93,7 @@ export const endpoints = {
     UPDATE: (id) => `/courses/${id}`,
     DELETE: (id) => `/courses/${id}`,
     ENROLL: (id) => `/courses/${id}/enroll`,
+    ENROLL_STUDENT: (id) => `/courses/${id}/enroll-student`,
     UNENROLL: (id) => `/courses/${id}/unenroll`,
     MY_COURSES: '/courses/my-courses',
     STATS: '/courses/stats/overview',
@@ -126,6 +127,11 @@ export const endpoints = {
     REPORTS_ATTENDANCE: '/analytics/reports/attendance',
     SUMMARY: (courseId) => `/analytics/summary/${courseId}`,
   },
+
+  ATTENDANCE: {
+    DAY: '/attendance/day',
+    DAY_BULK: '/attendance/day/bulk',
+  },
 };
 
 export const authService = {
@@ -157,6 +163,8 @@ export const courseService = {
   updateCourse: (id, data) => api.put(endpoints.COURSES.UPDATE(id), data),
   deleteCourse: (id) => api.delete(endpoints.COURSES.DELETE(id)),
   enrollInCourse: (id) => api.post(endpoints.COURSES.ENROLL(id)),
+  enrollStudentAsAdmin: (courseId, studentId) =>
+    api.post(endpoints.COURSES.ENROLL_STUDENT(courseId), { studentId }),
   unenrollFromCourse: (id) => api.post(endpoints.COURSES.UNENROLL(id)),
   getMyCourses: () => api.get(endpoints.COURSES.MY_COURSES),
   getCourseStats: () => api.get(endpoints.COURSES.STATS),
@@ -172,6 +180,12 @@ export const assessmentService = {
   gradeSubmission: (id, studentId, data) => api.post(endpoints.ASSESSMENTS.GRADE(id, studentId), data),
   getMyAssessments: () => api.get(endpoints.ASSESSMENTS.MY_ASSESSMENTS),
   getUpcomingAssessments: () => api.get(endpoints.ASSESSMENTS.UPCOMING),
+};
+
+export const attendanceService = {
+  getAttendanceDay: (courseId, date) =>
+    api.get(endpoints.ATTENDANCE.DAY, { params: { courseId, date } }),
+  saveAttendanceDayBulk: (payload) => api.post(endpoints.ATTENDANCE.DAY_BULK, payload),
 };
 
 export const analyticsService = {

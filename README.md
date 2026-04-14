@@ -107,6 +107,21 @@ learning-analytics-dashboard/
    npm start
    ```
 
+### Default administrator account
+
+When the backend starts and connects to MongoDB, it ensures a built-in administrator exists (see `backend/src/utils/defaultAdmin.js`). You can sign in with either identifier:
+
+| Field | Value |
+|--------|--------|
+| **Username** | `Admin` (entered in the email field on the login page; case-insensitive) |
+| **Email** | `admin@admin.com` (alternative to `Admin`) |
+| **Password** | `Admin123` |
+
+You can override these with environment variables `DEFAULT_ADMIN_EMAIL` and `DEFAULT_ADMIN_PASSWORD` in `backend/.env` (see `backend/.env.example`).
+
+**Security:** Change the default password in any shared or production deployment.
+
+
 ## 📊 API Endpoints
 
 ### Authentication

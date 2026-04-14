@@ -14,7 +14,6 @@ router.post('/register', validateUserRegistration, async (req, res) => {
       lastName, 
       email, 
       password, 
-      role = 'student', 
       phone: phoneRaw, 
       dateOfBirth: dobRaw,
       studentId,
@@ -22,6 +21,8 @@ router.post('/register', validateUserRegistration, async (req, res) => {
       attendance,
       courses
     } = req.body;
+
+    const role = 'student';
 
     const phone = phoneRaw && String(phoneRaw).trim() ? String(phoneRaw).trim() : undefined;
     const dateOfBirth = dobRaw && String(dobRaw).trim() ? dobRaw : undefined;
