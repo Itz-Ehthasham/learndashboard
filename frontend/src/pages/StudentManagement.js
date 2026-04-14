@@ -34,6 +34,8 @@ const StudentManagement = () => {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingStudent, setEditingStudent] = useState(null);
   const [showBulkImport, setShowBulkImport] = useState(false);
+  const [bulkImportFile, setBulkImportFile] = useState(null);
+  const [isBulkImporting, setIsBulkImporting] = useState(false);
   const [enrollModalStudent, setEnrollModalStudent] = useState(null);
   const [enrollCourseId, setEnrollCourseId] = useState('');
   const [attendanceModalStudent, setAttendanceModalStudent] = useState(null);
@@ -246,43 +248,107 @@ const StudentManagement = () => {
     });
   };
 
-  const handleBulkImport = (event) => {
-    const file = event.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        try {
-          const csvData = e.target.result;
-          const lines = csvData.split('\n');
-          const headers = lines[0].split(',');
-          
-          const students = lines.slice(1).map(line => {
-            const values = line.split(',');
-            return {
-              firstName: values[0]?.trim(),
-              lastName: values[1]?.trim(),
-              email: values[2]?.trim(),
-              studentId: values[3]?.trim(),
-              section: values[4]?.trim(),
-              year: parseInt(values[5]) || undefined,
-              semester: values[6]?.trim(),
-              batch: values[7]?.trim(),
-              role: 'student'
-            };
-          }).filter(student => student.email);
+  const handleBulkImport = async (file) => {
+    if (!file) return;
 
-          
-          students.forEach(studentData => {
-            createStudentMutation.mutate(studentData);
-          });
-          
-          toast.success(`${students.length} students imported successfully!`);
-          setShowBulkImport(false);
-        } catch (error) {
-          toast.error('Error parsing CSV file');
-        }
-      };
-      reader.readAsText(file);
+    const normalizeName = (value = '') =>
+      String(value)
+        .replace(/[^a-zA-Z\s]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+    const normalizeEmail = (value = '') =>
+      String(value).trim().toLowerCase().replace(/\s+/g, '');
+
+    const normalizeSemester = (value = '') => {
+      const raw = String(value).trim();
+      const match = raw.match(/[1-8]/);
+      return match ? match[0] : '1';
+    };
+
+    try {
+      setIsBulkImporting(true);
+      const csvData = await file.text();
+      const lines = csvData
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter(Boolean);
+
+      if (lines.length <= 1) {
+        toast.error('CSV file is empty or missing data rows');
+        return;
+      }
+
+      const students = lines.slice(1).map((line, index) => {
+        const values = line.split(',').map((v) => v.trim());
+        const firstName = normalizeName(values[0]);
+        const lastName = normalizeName(values[1]);
+        const email = normalizeEmail(values[2]);
+        const studentId = values[3] || undefined;
+        const year = parseInt(values[5], 10);
+
+        return {
+          rowNumber: index + 2,
+          payload: {
+            firstName,
+            lastName,
+            email,
+            studentId,
+            password: 'Student123',
+            role: 'student',
+            academicInfo: {
+              section: values[4] || undefined,
+              year: Number.isInteger(year) ? year : undefined,
+              semester: normalizeSemester(values[6]),
+              batch: values[7] || undefined,
+            },
+          },
+        };
+      });
+
+      const validRows = students.filter(
+        ({ payload }) => payload.firstName && payload.lastName && payload.email
+      );
+
+      if (!validRows.length) {
+        toast.error('No valid rows found. Check first name, last name and email columns.');
+        return;
+      }
+
+      const results = await Promise.allSettled(
+        validRows.map(({ payload }) => userService.createUser(payload))
+      );
+
+      const failures = results
+        .map((result, idx) => ({ result, row: validRows[idx].rowNumber }))
+        .filter(({ result }) => result.status === 'rejected');
+
+      const successCount = results.length - failures.length;
+      if (successCount > 0) {
+        toast.success(`${successCount} students imported successfully`);
+        refetchUsers();
+      }
+
+      if (failures.length > 0) {
+        const sampleErrors = failures
+          .slice(0, 3)
+          .map(({ result, row }) => {
+            const message =
+              result.reason?.response?.data?.message ||
+              result.reason?.response?.data?.errors?.[0] ||
+              'Validation failed';
+            return `Row ${row}: ${message}`;
+          })
+          .join(' | ');
+        toast.error(`${failures.length} rows failed. ${sampleErrors}`);
+      } else {
+        setShowBulkImport(false);
+      }
+    } catch (error) {
+      toast.error('Error parsing CSV file');
+    } finally {
+      setIsBulkImporting(false);
+      setBulkImportFile(null);
     }
   };
 
@@ -743,7 +809,13 @@ Jane,Smith,jane.smith@school.com,ST002,B,3,1,2024`;
       {showBulkImport && (
         <div className="fixed inset-0 z-50 overflow-y-auto">
           <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-            <div className="fixed inset-0 transition-opacity" onClick={() => setShowBulkImport(false)}>
+            <div
+              className="fixed inset-0 transition-opacity"
+              onClick={() => {
+                setShowBulkImport(false);
+                setBulkImportFile(null);
+              }}
+            >
               <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
             </div>
 
@@ -770,16 +842,29 @@ Jane,Smith,jane.smith@school.com,ST002,B,3,1,2024`;
                   <input
                     type="file"
                     accept=".csv"
-                    onChange={handleBulkImport}
+                    onChange={(event) => setBulkImportFile(event.target.files?.[0] || null)}
                     className="form-input"
                   />
+                  {bulkImportFile && (
+                    <button
+                      type="button"
+                      onClick={() => handleBulkImport(bulkImportFile)}
+                      disabled={isBulkImporting}
+                      className="btn btn-primary w-full mt-3"
+                    >
+                      {isBulkImporting ? 'Adding...' : `Add ${bulkImportFile.name}`}
+                    </button>
+                  )}
                 </div>
               </div>
 
               <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
                 <button
                   type="button"
-                  onClick={() => setShowBulkImport(false)}
+                  onClick={() => {
+                    setShowBulkImport(false);
+                    setBulkImportFile(null);
+                  }}
                   className="btn btn-primary w-full sm:ml-3 sm:w-auto"
                 >
                   Close
